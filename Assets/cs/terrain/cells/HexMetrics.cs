@@ -156,10 +156,10 @@ public class HexMetrics : MonoBehaviour
     public const float maxRainElevation = 100f; //80f;
 
     // 干湿格子的最大蓄水量
-    public const float cellMaxPondage = 100f;//100f;
+    public const float cellMaxPondage = 80f;//100f;
 
     // 每单位高度湖泊格子的最大蓄水量
-    public const float waterCellMaxPondage = 100f;//100f;
+    public const float waterCellMaxPondage = 30f; //120f;//100f;
 
     // 河床高度
     public const float streamBedElevationOffset = -1f;

@@ -114,7 +114,7 @@ public class HexCell : MonoBehaviour
                 }
             }
 
-            label.text = string.Format("{0}\n{1}", (int)height, (int)rain);
+            
         }
     }
 
@@ -129,6 +129,7 @@ public class HexCell : MonoBehaviour
         set
         {
             pondage = value;
+            label.text = string.Format("{0}\n{1}\n{2}", index, (int)height, (int)pondage);
         }
     }
 
