@@ -94,16 +94,8 @@ public class HexCell : MonoBehaviour
         }
         set
         {
-            if(index == 208)
-            {
-                Debug.Log(string.Format("IIIIIIIIIII {0}", value));
-            }
             terrainType = value;
             color = HexMetrics.GetTerrainTypeColor(terrainType);
-            if (index == 208)
-            {
-                Debug.Log(string.Format("IIIIIIII2III {0}", terrainType));
-            }
         }
     }
 
@@ -153,9 +145,27 @@ public class HexCell : MonoBehaviour
         }
     }
 
-
     // 河流
     public RiverCell riverCell;
+
+    // 湖泊高度
+    int lakesLevel;
+    public int LakesLevel
+    {
+        get
+        {
+            return lakesLevel;
+        }
+        set
+        {
+            if (lakesLevel == value)
+            {
+                return;
+            }
+            lakesLevel = value;
+            Refresh();
+        }
+    }
 
     public void Awake()
     {
@@ -328,7 +338,18 @@ public class HexCell : MonoBehaviour
         get
         {
             return
-                (elevation + HexMetrics.riverSurfaceElevationOffset) *
+                (elevation + HexMetrics.waterElevationOffset) *
+                HexMetrics.elevationStep;
+        }
+    }
+
+    // 湖泊高度
+    public float LakesSurfaceY
+    {
+        get
+        {
+            return
+                (lakesLevel + HexMetrics.waterElevationOffset) *
                 HexMetrics.elevationStep;
         }
     }
@@ -370,5 +391,11 @@ public class HexCell : MonoBehaviour
         }
 
         return null;
+    }
+
+
+    public bool IsLakes()
+    {
+        return terrainType == HexTerrainType.Water;
     }
 }

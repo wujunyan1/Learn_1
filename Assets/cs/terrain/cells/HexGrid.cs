@@ -824,10 +824,6 @@ public class HexGrid : MonoBehaviour
                         if (neighbor.Elevation < minLandElevation)
                         {
                             minLandElevation = neighbor.Elevation;
-                            if(neighbor.index < 220 && neighbor.index > 200)
-                            {
-                                Debug.Log(string.Format("XXXXXXXXXXXXX {0} {1} {2}", minLandElevation, neighbor.index, neighbor.TerrainType));
-                            }
                         }
                         //cell.Elevation = neighbor.Elevation - 1;
                     }
@@ -837,16 +833,13 @@ public class HexGrid : MonoBehaviour
             // 循环湖泊中的所有格子
             foreach (var item in itemList)
             {
-                if(item.Key == 208)
-                {
-                    Debug.Log(string.Format("############ {0} {1}",minLandElevation, itemList.Count));
-                }
                 HexCell cell = item.Value;
                 if(cell.Elevation >= minLandElevation)
                 {
                     cell.Elevation = minLandElevation - 1;
                 }
 
+                cell.LakesLevel = minLandElevation;
                 //cell.Elevation = 0;
             }
         }

@@ -166,10 +166,11 @@ public class HexMetrics : MonoBehaviour
     public const float streamBedElevationOffset = -1f;
 
     // 河水偏移高度
-    public const float riverSurfaceElevationOffset = -0.5f;
+    public const float waterElevationOffset = -0.5f;
 
     public static Color[] terrainTypeColor = {
-        new Color(0.26f, 0.61f, 0.85f),
+        //new Color(0.26f, 0.61f, 0.85f),
+        new Color(0.91f, 0.34f, 0.11f),
         new Color(0.91f, 0.34f, 0.11f),
         new Color(0.91f, 0.34f, 0.11f),
         new Color(0.91f, 0.34f, 0.11f),
@@ -181,6 +182,27 @@ public class HexMetrics : MonoBehaviour
     {
         Color color = terrainTypeColor[(int)type];
         return color;
+    }
+
+    // 将海岸的浪花分为2边
+    public const float lakesFactor = 0.6f;
+
+    public static Vector3 GetFirstLakesCorner(HexDirection direction)
+    {
+        return corners[(int)direction] * lakesFactor;
+    }
+
+    public static Vector3 GetSecondLakesCorner(HexDirection direction)
+    {
+        return corners[(int)direction + 1] * lakesFactor;
+    }
+
+    public const float lakesBlendFactor = 1f - lakesFactor;
+
+    public static Vector3 GetLakesBridge(HexDirection direction)
+    {
+        return (corners[(int)direction] + corners[(int)direction + 1]) *
+            lakesBlendFactor;
     }
 }
 

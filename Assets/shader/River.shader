@@ -6,7 +6,8 @@
 		_Metallic("Metallic", Range(0,1)) = 0.0
 	}
 		SubShader{
-			Tags { "RenderType" = "Transparent" "Queue" = "Transparent" }
+			Tags { "RenderType" = "Transparent" "Queue" = "Transparent+1" }
+			Zwrite Off
 			LOD 200
 
 			CGPROGRAM
