@@ -126,6 +126,7 @@ public class HexGrid : MonoBehaviour
         // 创建降雨图
         CreateRainMap(rainRandom);
         CreateAllRiver();
+        CheckLakeRiver();
     }
 
     void CreateChunks()
@@ -219,7 +220,7 @@ public class HexGrid : MonoBehaviour
         //hei[x][z]; // 
         cell.Height = (PerlinNoise(position.x + random, position.z + random, frequency, octaves, lacunarity, persistence) + 0f) * HexMetrics.maxElevation;
 
-        if (cell.terrainType == HexTerrainType.Water)
+        if (cell.TerrainType == HexTerrainType.Water)
         {
             cell.color = touchedColor;
         }
@@ -317,7 +318,7 @@ public class HexGrid : MonoBehaviour
             }
 
             cell.Rain = rain;
-            cell.label.text = string.Format("{0}\n{1}\n{2}", index, (int)height, (int)cell.Pondage);
+            cell.label.text = string.Format("{0}\n{1}\n{2}", index, (int)height, (int)cell.TerrainType);
         }
 
 
@@ -349,7 +350,7 @@ public class HexGrid : MonoBehaviour
             //Debug.Log(!cell.HasRiver());
             //Debug.Log(cell.terrainType);
             // 超过最大蓄水量才会下流 并且该地块不是河流
-            if (pondage > HexMetrics.cellMaxPondage && !cell.HasRiver() && cell.terrainType != HexTerrainType.Water )
+            if (pondage > HexMetrics.cellMaxPondage && !cell.HasRiver() && cell.TerrainType != HexTerrainType.Water )
             {
                 //Debug.Log("rains+++++1");
                 //Debug.Log(string.Format("add rains {0}", cell.index));
@@ -417,7 +418,7 @@ public class HexGrid : MonoBehaviour
                 }
 
                 // 如果是湖泊
-                if(cell.terrainType == HexTerrainType.Water)
+                if(cell.TerrainType == HexTerrainType.Water)
                 {
 
                 }
@@ -481,7 +482,7 @@ public class HexGrid : MonoBehaviour
                 {
                     //Debug.Log(string.Format(" cell pondage {0} {1} {2}", cell.coordinates.ToString(), cell.terrainType, cell.Pondage));
                 }
-                if(cell && cell.terrainType == HexTerrainType.Water && cell.Pondage >= HexMetrics.waterCellMaxPondage)
+                if(cell && cell.TerrainType == HexTerrainType.Water && cell.Pondage >= HexMetrics.waterCellMaxPondage)
                 {
 
                 }
@@ -501,7 +502,7 @@ public class HexGrid : MonoBehaviour
                     }
 
                     // 周围的有过多的水量也会被河流带走
-                    if (cell && cell.Pondage > HexMetrics.cellMaxPondage && cell.terrainType != HexTerrainType.Water)
+                    if (cell && cell.Pondage > HexMetrics.cellMaxPondage && cell.TerrainType != HexTerrainType.Water)
                     {
                         addFlow += cell.Pondage - HexMetrics.cellMaxPondage;
                         cell.Pondage = HexMetrics.cellMaxPondage;
@@ -517,7 +518,7 @@ public class HexGrid : MonoBehaviour
             //Debug.Log(string.Format(" downCell {0} {1} {2} {3}", co, downCell.coordinates.ToString(), downCell.terrainType, downCell.Pondage));
 
             // 如果自己本身是湖泊
-            if(next.terrainType == HexTerrainType.Water)
+            if(next.TerrainType == HexTerrainType.Water)
             {
                 addFlow += next.Pondage - HexMetrics.waterCellMaxPondage;
                 next.Pondage = HexMetrics.waterCellMaxPondage;
@@ -526,8 +527,8 @@ public class HexGrid : MonoBehaviour
                 // 这个流入点变为河流并取消这个流入点
                 if (next.IsInComingRiverDirection(nextDir))
                 {
-                    downCell.terrainType = HexTerrainType.Water;
-                    downCell.color = touchedColor;
+                    downCell.TerrainType = HexTerrainType.Water;
+                    //downCell.color = touchedColor;
                     downCell.Pondage += addFlow;
 
                     next.ClearRiver(nextDir);
@@ -545,7 +546,7 @@ public class HexGrid : MonoBehaviour
             else if (next.Height < downCell.Height)
             {
                 // 自身变为水域
-                next.terrainType = HexTerrainType.Water;
+                next.TerrainType = HexTerrainType.Water;
                 next.color = touchedColor;
                 next.Pondage = next.Pondage + addFlow;
                 addFlow = 0;
@@ -602,17 +603,21 @@ public class HexGrid : MonoBehaviour
 
     void AddLakesCell(Dictionary<int, HexCell> lake, HexCell cell)
     {
-        cell.terrainType = HexTerrainType.Water;
-        cell.color = touchedColor;
-        lake.Add(cell.index, cell);
+        HexCell oldCell;
+        if(!lake.TryGetValue(cell.index, out oldCell))
+        {
+            cell.TerrainType = HexTerrainType.Water;
+            //cell.color = touchedColor;
+            lake.Add(cell.index, cell);
+        }
 
         Debug.Log(string.Format("add lake cell {0}", cell.index));
     }
 
     void removeLakesCell(Dictionary<int, HexCell> lake, HexCell cell)
     {
-        cell.terrainType = HexTerrainType.Land;
-        cell.color = defaultColor;
+        cell.TerrainType = HexTerrainType.Land;
+        //cell.color = defaultColor;
         lake.Remove(cell.index);
 
         Debug.Log(string.Format("remove lake cell {0}", cell.index));
@@ -637,7 +642,7 @@ public class HexGrid : MonoBehaviour
         // 水多了
         if(currStep.Pondage > waterNum + HexMetrics.cellMaxPondage)
         {
-            CreateCellLakes(lake, currStep, currStep.Height, addFlow);
+            CreateCellLakes(lake, currStep, currStep.Height, minHeightNeighbor, nextDir, addFlow);
         }
         // 这个湖泊就是终点了，而且只有一个格子
         else
@@ -653,7 +658,7 @@ public class HexGrid : MonoBehaviour
      *  waterHeight 当前湖水高度
      *  addFlow 多余水量
      */
-    void CreateCellLakes(Dictionary<int, HexCell> lake, HexCell lastCell, float waterHeight, float addFlow)
+    void CreateCellLakes(Dictionary<int, HexCell> lake, HexCell lastCell, float waterHeight, HexCell lastNearCell, HexDirection lastNearDir, float addFlow)
     {
         // 最低的湖泊邻居
         HexCell lowCell = null;
@@ -710,6 +715,7 @@ public class HexGrid : MonoBehaviour
             addFlow += waterNum;
 
             // 设置一条流出到这个格子的河流
+            lastNearCell.SetOutgoingRiver(lastNearDir, addFlow);
             nearCell.SetOutgoingRiver(nearDir, addFlow);
             Debug.Log(string.Format("------------{0}", nearCell.index));
 
@@ -717,6 +723,12 @@ public class HexGrid : MonoBehaviour
         }
         else
         {
+            // 如果他也是湖泊
+            if(lowCell.TerrainType == HexTerrainType.Water)
+            {
+                LakeMerge(lake, lowCell);
+            }
+
             // 这个高度差下，能装的水量
             float heightDiff = lowCell.Height - waterHeight;
             int cellNum = lake.Count;
@@ -735,11 +747,107 @@ public class HexGrid : MonoBehaviour
             {
                 addFlow -= waterNum;
                 // 继续添加湖泊
-                CreateCellLakes(lake, lowCell, lowCell.Height, addFlow);
+                CreateCellLakes(lake, lowCell, lowCell.Height, nearCell, nearDir, addFlow);
             }
+
             else
             {
                 CreateAllRiver();
+            }
+        }
+    }
+
+    // 湖水合并
+    void LakeMerge(Dictionary<int, HexCell> lake, HexCell conCell)
+    {
+        int lakeIndex = -1;
+        // 循环所有湖泊
+        for (int index = 0; index < lakes.Count; index++)
+        {
+            Dictionary<int, HexCell> itemList = lakes[index];
+            // 判断该湖泊中是否有该格子
+            HexCell cell;
+            // 存在，则2个湖泊进行合并
+            if (itemList.TryGetValue(conCell.index, out cell))
+            {
+                foreach (var item in itemList)
+                {
+                    AddLakesCell(lake, item.Value);
+                }
+                break;
+            }
+        }
+        if(lakeIndex != -1)
+        {
+            lakes.RemoveAt(lakeIndex);
+        }
+    }
+
+    // 检查湖泊里多余的河流
+    void CheckLakeRiver()
+    {
+        // 循环所有湖泊
+        foreach (Dictionary<int, HexCell> itemList in lakes)
+        {
+            int minLandElevation = HexMetrics.hierarchyNum;
+
+            // 循环湖泊中的所有格子
+            foreach (var item in itemList)
+            {
+                HexCell cell = item.Value;
+
+                // 所有湖泊降低半个高度
+                //Vector3 center = cell.transform.localPosition;
+                //center.y = (cell.Elevation + HexMetrics.riverSurfaceElevationOffset) *  HexMetrics.elevationStep;
+                //cell.transform.localPosition = center;
+
+                //List<HexDirection> outgoings = cell.GetRiverDirections(RiverDirection.Outgoing);
+
+                // 循环所有的邻居
+                for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
+                {
+                    River river = cell.GetRiver(dir);
+                    HexCell neighbor = cell.GetNeighbor(dir);
+                    // 这个边有河流，并且是流出的河流
+                    if (river != null && river.direction == RiverDirection.Outgoing)
+                    {
+                        // 如果流出也是湖泊则，这个河路径取消
+                        if (neighbor && neighbor.TerrainType == HexTerrainType.Water)
+                        {
+                            cell.ClearRiver(dir);
+                        }
+                    }
+
+                    // 如果湖泊与周围地块高度相同，则降低一个地块
+                    if (neighbor && neighbor.TerrainType != HexTerrainType.Water)
+                    {
+                        if (neighbor.Elevation < minLandElevation)
+                        {
+                            minLandElevation = neighbor.Elevation;
+                            if(neighbor.index < 220 && neighbor.index > 200)
+                            {
+                                Debug.Log(string.Format("XXXXXXXXXXXXX {0} {1} {2}", minLandElevation, neighbor.index, neighbor.TerrainType));
+                            }
+                        }
+                        //cell.Elevation = neighbor.Elevation - 1;
+                    }
+                }
+            }
+
+            // 循环湖泊中的所有格子
+            foreach (var item in itemList)
+            {
+                if(item.Key == 208)
+                {
+                    Debug.Log(string.Format("############ {0} {1}",minLandElevation, itemList.Count));
+                }
+                HexCell cell = item.Value;
+                if(cell.Elevation >= minLandElevation)
+                {
+                    cell.Elevation = minLandElevation - 1;
+                }
+
+                //cell.Elevation = 0;
             }
         }
     }

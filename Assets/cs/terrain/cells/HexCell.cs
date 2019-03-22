@@ -85,7 +85,27 @@ public class HexCell : MonoBehaviour
     public Text label;
 
     // 地形类型
-    public HexTerrainType terrainType = HexTerrainType.Land;
+    HexTerrainType terrainType = HexTerrainType.Land;
+    public HexTerrainType TerrainType
+    {
+        get
+        {
+            return terrainType;
+        }
+        set
+        {
+            if(index == 208)
+            {
+                Debug.Log(string.Format("IIIIIIIIIII {0}", value));
+            }
+            terrainType = value;
+            color = HexMetrics.GetTerrainTypeColor(terrainType);
+            if (index == 208)
+            {
+                Debug.Log(string.Format("IIIIIIII2III {0}", terrainType));
+            }
+        }
+    }
 
     public HexGridChunk chunk;
 
@@ -217,10 +237,10 @@ public class HexCell : MonoBehaviour
         //Debug.Log("----rver---------");
         // 流出方向的块更高则不添加
         HexCell neighbor = GetNeighbor(direction);
-        if (!neighbor || elevation < neighbor.elevation)
-        {
-            return;
-        }
+        //if (!neighbor || elevation < neighbor.elevation)
+        //{
+        //    return;
+        //}
 
         //Debug.Log("----riverCell--SetOutgoingRiver---------");
         // 设置流出河流
@@ -340,5 +360,15 @@ public class HexCell : MonoBehaviour
         {
             neighbor.riverCell.ClearRiver(direction.Opposite());
         }
+    }
+
+    public River GetRiver(HexDirection direction)
+    {
+        if (riverCell != null)
+        {
+            return riverCell.GetRiver(direction);
+        }
+
+        return null;
     }
 }

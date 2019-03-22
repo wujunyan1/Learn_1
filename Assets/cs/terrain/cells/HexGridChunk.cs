@@ -101,6 +101,8 @@ public class HexGridChunk : MonoBehaviour
         {
             TriangulateWithRiverConnection(cell);
         }
+
+        cell.label.text = string.Format("{0}\n{1}\n{2}", cell.index, cell.Elevation, (int)cell.TerrainType);
     }
 
     // 渲染某个方向的三角形

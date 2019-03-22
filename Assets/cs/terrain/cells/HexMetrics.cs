@@ -18,6 +18,7 @@ public enum HexTerrainType
     Land,               // 土地
 }
 
+
 // 六边形 数据
 public class HexMetrics : MonoBehaviour
 {
@@ -166,5 +167,20 @@ public class HexMetrics : MonoBehaviour
 
     // 河水偏移高度
     public const float riverSurfaceElevationOffset = -0.5f;
+
+    public static Color[] terrainTypeColor = {
+        new Color(0.26f, 0.61f, 0.85f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+    };
+
+    public static Color GetTerrainTypeColor(HexTerrainType type)
+    {
+        Color color = terrainTypeColor[(int)type];
+        return color;
+    }
 }
 
