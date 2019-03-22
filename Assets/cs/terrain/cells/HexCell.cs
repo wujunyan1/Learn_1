@@ -47,7 +47,7 @@ public class HexCell : MonoBehaviour
             }
             else
             {
-                terrainType = HexTerrainType.Land;
+                //terrainType = HexTerrainType.Land;
             }
 
             // 并非初始赋值时
