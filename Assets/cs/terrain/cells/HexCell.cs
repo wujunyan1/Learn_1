@@ -2,11 +2,20 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.IO;
+
+public enum RiverDirection
+{
+    Null,
+    Incoming,
+    Outgoing
+}
 
 // 一个六边形 类
 public class HexCell : MonoBehaviour
 {
     public int index;
+    public int chunkIndex;
 
     // 坐标
     public HexCoordinates coordinates;
@@ -31,19 +40,13 @@ public class HexCell : MonoBehaviour
             //elevation = 1;
 
             // 修改垂直坐标
-            Vector3 position = transform.localPosition;
-            position.y = value * HexMetrics.elevationStep;
-            transform.localPosition = position;
-
-            // 修改UI位置
-            Vector3 uiPosition = uiRect.localPosition;
-            uiPosition.z = elevation * -HexMetrics.elevationStep;
-            uiRect.localPosition = uiPosition;
-
+            RefreshPosition();
+            
             if (HexMetrics.elevationHierarchy[elevation] <= HexMetrics.coastline)
             {
                 //Debug.Log("++++++++++++");
                 terrainType = HexTerrainType.Water;
+                LakesLevel = elevation + 1;
             }
             else
             {
@@ -53,14 +56,14 @@ public class HexCell : MonoBehaviour
             // 并非初始赋值时
             if (old_elevation != int.MinValue)
             {
-                Refresh();
+                //Refresh();
             }
         }
     }
 
     // 高度 数据非显示高度
-    float height;
-    public float Height
+    int height;
+    public int Height
     {
         get
         {
@@ -74,7 +77,13 @@ public class HexCell : MonoBehaviour
     }
 
     // 颜色
-    public Color color;
+    public Color Color
+    {
+        get
+        {
+            return HexMetrics.GetTerrainTypeColor(terrainType); ;
+        }
+    }
 
     // 旁边的
     [SerializeField]
@@ -95,16 +104,14 @@ public class HexCell : MonoBehaviour
         set
         {
             terrainType = value;
-            color = HexMetrics.GetTerrainTypeColor(terrainType);
         }
     }
 
     public HexGridChunk chunk;
 
     // 降雨量
-    public float rain = 0f;
-
-    public float Rain
+    public int rain = 0;
+    public int Rain
     {
         get
         {
@@ -121,8 +128,8 @@ public class HexCell : MonoBehaviour
             {
                 if(cell)
                 {
-                    cell.rain += (addRain * 0.3f);
-                    cell.pondage += (addRain * 0.3f);
+                    cell.rain += (int)(addRain * 0.3f);
+                    cell.pondage += (int)(addRain * 0.3f);
                 }
             }
 
@@ -131,8 +138,8 @@ public class HexCell : MonoBehaviour
     }
 
     // 蓄水量
-    public float pondage = 0f;
-    public float Pondage
+    public int pondage = 0;
+    public int Pondage
     {
         get
         {
@@ -144,10 +151,7 @@ public class HexCell : MonoBehaviour
             label.text = string.Format("{0}\n{1}\n{2}", index, (int)height, (int)pondage);
         }
     }
-
-    // 河流
-    public RiverCell riverCell;
-
+    
     // 湖泊高度
     int lakesLevel;
     public int LakesLevel
@@ -163,14 +167,80 @@ public class HexCell : MonoBehaviour
                 return;
             }
             lakesLevel = value;
-            Refresh();
+            //Refresh();
         }
     }
 
-    public void Awake()
+    // 临时数据 
+    public float lakesHeight;
+
+    // 存储量
+    int store;
+    public int Store
     {
+        get
+        {
+            return store;
+        }
+        set
+        {
+            store = value;
+        }
     }
 
+    // 河流
+    RiverDirection[] rivers;
+
+    public void Awake()
+    {
+        rivers = new RiverDirection[HexMetrics.HexTrianglesNum];
+    }
+
+    public void Save(BinaryWriter writer)
+    {
+        writer.Write((byte)terrainType);
+        writer.Write((byte)elevation);
+        writer.Write((byte)height);
+        writer.Write((byte)rain);
+        writer.Write((byte)pondage);
+        writer.Write((byte)lakesLevel);
+        writer.Write(store);
+
+        for (int i = 0; i < rivers.Length; i++)
+        {
+            writer.Write((byte)rivers[i]);
+        }
+
+    }
+
+    public void Load(BinaryReader reader)
+    {
+        terrainType = (HexTerrainType)reader.ReadByte();
+        elevation = reader.ReadByte();
+        RefreshPosition();
+        height = reader.ReadByte();
+        rain = reader.ReadByte();
+        pondage = reader.ReadByte();
+        lakesLevel = reader.ReadByte();
+        store = reader.ReadInt32();
+
+        for (int i = 0; i < rivers.Length; i++)
+        {
+            rivers[i] = (RiverDirection)reader.ReadByte();
+        }
+
+    }
+
+    void RefreshPosition()
+    {
+        Vector3 position = transform.localPosition;
+        position.y = elevation * HexMetrics.elevationStep;
+        transform.localPosition = position;
+
+        Vector3 uiPosition = uiRect.localPosition;
+        uiPosition.z = -position.y;
+        uiRect.localPosition = uiPosition;
+    }
 
     public HexCell GetNeighbor(HexDirection direction)
     {
@@ -239,66 +309,79 @@ public class HexCell : MonoBehaviour
     // 增加一条流出的河流
     public void SetOutgoingRiver(HexDirection direction, float flow)
     {
-        if (riverCell == null)
-        {
-            riverCell = new RiverCell();
-        }
-
-        //Debug.Log("----rver---------");
-        // 流出方向的块更高则不添加
+        
         HexCell neighbor = GetNeighbor(direction);
-        //if (!neighbor || elevation < neighbor.elevation)
-        //{
-        //    return;
-        //}
 
-        //Debug.Log("----riverCell--SetOutgoingRiver---------");
         // 设置流出河流
-        riverCell.SetOutgoingRiver(direction, flow);
-
-        // 如果对方不是水域 则添加一条流入河流
-        //if(neighbor.terrainType != HexTerrainType.Water)
-        //{
+        rivers[(int)direction] = RiverDirection.Outgoing;
+        if (neighbor)
+        {
             neighbor.SetIncomingRiver(HexDirectionExtensions.Opposite(direction), flow);
-        //}
+        }
     }
 
     // 增加一条流入的河流
     public void SetIncomingRiver(HexDirection direction, float flow)
     {
-        if (riverCell == null)
-        {
-            riverCell = new RiverCell();
-        }
-      
         // 设置流入河流
-        riverCell.SetIncomingRiver(direction, flow);
+        rivers[(int)direction] = RiverDirection.Incoming;
+    }
+
+    public RiverDirection GetRiverDirection(HexDirection direction)
+    {
+        return rivers[(int)direction];
     }
 
     public bool HasRiver()
     {
-        if(riverCell != null)
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            return riverCell.HasRiver();
+            if (GetRiverDirection(dir) != RiverDirection.Null)
+            {
+                return true;
+            }
         }
-
         return false;
     }
 
     // 判断指定的边是否有河流
     public bool HasRiverThroughEdge(HexDirection direction)
     {
-        return riverCell != null && riverCell.GetRiver(direction) != null;
+        return GetRiverDirection(direction) != RiverDirection.Null;
     }
 
     public bool HasRiverBeginOrEnd()
     {
         // 如果是湖泊，只要有河流就是开头和结束
-        if(terrainType == HexTerrainType.Water)
+        bool hasIn = false;
+        bool hasOut = false;
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            return riverCell != null && riverCell.GetRiverCount() > 0;
+            RiverDirection river = GetRiverDirection(dir);
+            if (river != RiverDirection.Null)
+            {
+                if (river == RiverDirection.Incoming)
+                {
+                    hasIn = true;
+                }
+                else if (river == RiverDirection.Outgoing)
+                {
+                    hasOut = true;
+                }
+            }
+
+            if (hasIn && hasOut)
+            {
+                return false;
+            }
         }
-        return riverCell != null && riverCell.HasRiverBeginOrEnd();
+
+        if (!hasIn && !hasOut)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     // 获取显示河床高度
@@ -314,22 +397,34 @@ public class HexCell : MonoBehaviour
 
     public int GetRiverCount()
     {
-        if(riverCell != null)
+        int count = 0;
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            return riverCell.GetRiverCount();
+            RiverDirection river = GetRiverDirection(dir);
+            if (river != RiverDirection.Null)
+            {
+                count++;
+            }
         }
 
-        return 0;
+        return count;
     }
 
+    // 获取某个流向的所有方向河流
     public List<HexDirection> GetRiverDirections(RiverDirection riverDirection)
     {
-        if (riverCell == null)
+        List<HexDirection> dirs = new List<HexDirection>();
+
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            return new List<HexDirection>();
+            RiverDirection river = GetRiverDirection(dir);
+            if (river == riverDirection)
+            {
+                dirs.Add(dir);
+            }
         }
 
-        return riverCell.GetRiverDirections(riverDirection);
+        return dirs;
     }
 
     // 河流表面的垂直位置
@@ -357,45 +452,51 @@ public class HexCell : MonoBehaviour
     // 判断指定的边是否有河流
     public bool IsInComingRiverDirection(HexDirection direction)
     {
-        if (riverCell == null)
-        {
-            return false;
-        }
-        River river = riverCell.GetRiver(direction);
-        if (river != null)
-        {
-            return river.direction == RiverDirection.Incoming;
-        }
-        return false;
+        RiverDirection river = GetRiverDirection(direction);
+        return river == RiverDirection.Incoming;
+    }
+
+    // 判断指定的边是否有河流
+    public bool IsOutgoingRiverDirection(HexDirection direction)
+    {
+        RiverDirection river = GetRiverDirection(direction);
+        return river == RiverDirection.Outgoing;
     }
 
     // 取消某方向河流
     public void ClearRiver(HexDirection direction)
     {
         // 清除自身的河流
-        riverCell.ClearRiver(direction);
+        rivers[(int)direction] = RiverDirection.Null;
 
         // 清除邻居相应的河流
         HexCell neighbor = GetNeighbor(direction);
         if (neighbor)
         {
-            neighbor.riverCell.ClearRiver(direction.Opposite());
+            neighbor.rivers[(int)direction.Opposite()] = RiverDirection.Null;
         }
     }
 
-    public River GetRiver(HexDirection direction)
-    {
-        if (riverCell != null)
-        {
-            return riverCell.GetRiver(direction);
-        }
+    //public River GetRiver(HexDirection direction)
+    //{
+    //    if (riverCell != null)
+    //    {
+    //        return riverCell.GetRiver(direction);
+    //    }
 
-        return null;
-    }
+    //    return null;
+    //}
 
 
     public bool IsLakes()
     {
         return terrainType == HexTerrainType.Water;
+    }
+
+    bool IsValidRiverDestination(HexCell neighbor)
+    {
+        return neighbor && (
+            elevation >= neighbor.elevation || lakesLevel == neighbor.elevation
+        );
     }
 }

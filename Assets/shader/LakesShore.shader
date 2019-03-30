@@ -18,6 +18,8 @@
         // Use shader model 3.0 target, to get nicer looking lighting
         #pragma target 3.0
 
+		#include "Lakes.cginc"
+
         sampler2D _MainTex;
 
         struct Input
@@ -34,27 +36,15 @@
         void surf (Input IN, inout SurfaceOutputStandard o)
         {
 			float shore = IN.uv_MainTex.y;
-			shore = sqrt(shore) * 0.8;
+			float foam = Foam(shore, IN.worldPos.xz, _MainTex);
+			float waves = Waves(IN.worldPos.xz, _MainTex);
+			waves *= 1 - shore;
 
-			float2 noiseUV = IN.worldPos.xz + _Time.y * 0.25;
-			float4 noise = tex2D(_MainTex, noiseUV * 0.015);
-
-			float distortion1 = noise.x * (1 - shore);
-			float foam1 = sin((shore + distortion1) * 10 - _Time.y);
-			foam1 *= foam1;
-
-			float distortion2 = noise.y * (1 - shore);
-			float foam2 = sin((shore + distortion2) * 10 + _Time.y + 2);
-			foam2 *= foam2 * 0.7;
-
-			float foam = max(foam1, foam2) * shore;
-
-			fixed4 c = saturate(_Color + foam);
-            o.Albedo = c.rgb;
-            // Metallic and smoothness come from slider variables
-            o.Metallic = _Metallic;
-            o.Smoothness = _Glossiness;
-            o.Alpha = c.a;
+			fixed4 c = saturate(_Color + max(foam, waves));
+			o.Albedo = c.rgb;
+			o.Metallic = _Metallic;
+			o.Smoothness = _Glossiness;
+			o.Alpha = c.a;
         }
         ENDCG
     }

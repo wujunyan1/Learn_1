@@ -1,12 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
 
-public enum RiverDirection
-{
-    Incoming,
-    Outgoing
-}
 
 public class River
 {
@@ -22,11 +18,21 @@ public class River
 
 public class RiverCell
 {
-    River[] rivers;
+    RiverDirection[] rivers;
 
     public RiverCell()
     {
-        rivers = new River[HexMetrics.HexTrianglesNum];
+        rivers = new RiverDirection[HexMetrics.HexTrianglesNum];
+    }
+
+    public void Save()
+    {
+
+    }
+
+    public void Load()
+    {
+
     }
 
     // 是否后河流
@@ -34,7 +40,7 @@ public class RiverCell
     {
         for(HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            if(GetRiver(dir) != null)
+            if(GetRiverDirection(dir) != RiverDirection.Null)
             {
                 return true;
             }
@@ -43,25 +49,18 @@ public class RiverCell
     }
 
     // 添加流出河流
-    public void SetOutgoingRiver(HexDirection direction, float flow)
+    public void SetOutgoingRiver(HexDirection direction)
     {
-        //Debug.Log("------SetOutgoingRiver---------");
-        // 有原来的河流 则合并水流量流出
-        float baseFlow = 0f;
-        if(rivers[(int)direction] != null)
-        {
-            baseFlow = rivers[(int)direction].flow;
-        }
-        rivers[(int)direction] = new River(RiverDirection.Outgoing, flow);
+        rivers[(int)direction] = RiverDirection.Outgoing;
     }
 
     // 添加流入河流
-    public void SetIncomingRiver(HexDirection direction, float flow)
+    public void SetIncomingRiver(HexDirection direction)
     {
-        rivers[(int)direction] = new River(RiverDirection.Incoming, flow);
+        rivers[(int)direction] = RiverDirection.Incoming;
     }
 
-    public River GetRiver(HexDirection direction)
+    public RiverDirection GetRiverDirection(HexDirection direction)
     {
         return rivers[(int)direction];
     }
@@ -70,14 +69,14 @@ public class RiverCell
     public float getAllIncomingFlow()
     {
         float flow = 0f;
-        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
-        {
-            River river = GetRiver(dir);
-            if (river != null && river.direction == RiverDirection.Incoming)
-            {
-                flow += river.flow;
-            }
-        }
+        //for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
+        //{
+        //    RiverDirection river = GetRiverDirection(dir);
+        //    if (river != null && river == RiverDirection.Incoming)
+        //    {
+                
+        //    }
+        //}
 
         return flow;
     }
@@ -89,14 +88,14 @@ public class RiverCell
         bool hasOut = false;
         for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            River river = GetRiver(dir);
-            if (river != null)
+            RiverDirection river = GetRiverDirection(dir);
+            if (river != RiverDirection.Null)
             {
-                if(river.direction == RiverDirection.Incoming)
+                if(river == RiverDirection.Incoming)
                 {
                     hasIn = true;
                 }
-                else if(river.direction == RiverDirection.Outgoing)
+                else if(river == RiverDirection.Outgoing)
                 {
                     hasOut = true;
                 }
@@ -127,8 +126,8 @@ public class RiverCell
         int count = 0;
         for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            River river = GetRiver(dir);
-            if (river != null)
+            RiverDirection river = GetRiverDirection(dir);
+            if (river != RiverDirection.Null)
             {
                 count++;
             }
@@ -144,8 +143,8 @@ public class RiverCell
 
         for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            River river = GetRiver(dir);
-            if (river != null && river.direction == direction)
+            RiverDirection river = GetRiverDirection(dir);
+            if (river == direction)
             {
                 dirs.Add(dir);
             }
@@ -156,6 +155,6 @@ public class RiverCell
 
     public void ClearRiver(HexDirection direction)
     {
-        rivers[(int)direction] = null;
+        rivers[(int)direction] = RiverDirection.Null;
     }
 }

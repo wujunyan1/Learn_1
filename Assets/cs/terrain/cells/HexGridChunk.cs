@@ -21,6 +21,11 @@ public class HexGridChunk : MonoBehaviour
     // 湖泊与陆地接壤
     public HexMesh lakesShore;
 
+    // 河口
+    public HexMesh estuaries;
+
+    public HexFeatureManager features;
+
     public Color[] colors;
 
     // 初始化地图
@@ -38,14 +43,6 @@ public class HexGridChunk : MonoBehaviour
     void CreateCells()
     {
         cells = new HexCell[HexMetrics.chunkSizeX * HexMetrics.chunkSizeZ];
-
-        for (int z = 0, i = 0; z < HexMetrics.chunkSizeZ; z++)
-        {
-            for (int x = 0; x < HexMetrics.chunkSizeX; x++)
-            {
-
-            }
-        }
     }
 
     public void AddCell(int index, HexCell cell)
@@ -53,6 +50,7 @@ public class HexGridChunk : MonoBehaviour
         //Debug.Log(index);
 
         cells[index] = cell;
+        cell.chunkIndex = index;
         cell.transform.SetParent(transform, false);
         cell.uiRect.SetParent(gridCanvas.transform, false);
         cell.chunk = this;
@@ -83,6 +81,8 @@ public class HexGridChunk : MonoBehaviour
         rivers.Clear();
         lakes.Clear();
         lakesShore.Clear();
+        estuaries.Clear();
+        features.Clear();
 
         for (int i = 0; i < cells.Length; i++)
         {
@@ -94,6 +94,8 @@ public class HexGridChunk : MonoBehaviour
         rivers.Apply();
         lakes.Apply();
         lakesShore.Apply();
+        estuaries.Apply();
+        features.Apply();
     }
 
     // 渲染某个六边形
@@ -112,7 +114,9 @@ public class HexGridChunk : MonoBehaviour
             TriangulateWithRiverConnection(cell);
         }
 
-        cell.label.text = string.Format("{0}\n{1}\n{2}", cell.index, cell.Elevation, (int)cell.TerrainType);
+        cell.label.text = string.Format("{0}\n{1}\n{2}", cell.index, (int)cell.Height, cell.TerrainType);
+
+        //features.AddFeature(cell);
     }
 
     // 渲染某个方向的三角形
@@ -140,6 +144,12 @@ public class HexGridChunk : MonoBehaviour
             {
                 e.v3.y = cell.StreamBedY;
 
+                // 是湖泊
+                if (cell.IsLakes())
+                {
+
+                }
+
                 //Debug.Log(cell.HasRiverBeginOrEnd());
                 // 只有流入或者流出
                 if (cell.HasRiverBeginOrEnd())
@@ -155,21 +165,27 @@ public class HexGridChunk : MonoBehaviour
             {
                 if (cell.HasRiverBeginOrEnd())
                 {
-                    TriangulateEdgeFan(center, e, cell.color);
+                    TriangulateEdgeFan(center, e, cell.Color);
                 }
                 else
                 {
                     TriangulateWithNoRiver(direction, cell, center, e);
                 }
                 //TriangulateEdgeFan(center, e, cell.color);
+
+                // 添加地上部分
+                Vector3 v1 = Vector3.Lerp(center, e.v1, 0.35f);
+                Vector3 v5 = Vector3.Lerp(center, e.v5, 0.35f);
+                features.AddFeature(cell, v1, v5, e.v1, e.v5);
             }
         }
         else
         {
-            TriangulateEdgeFan(center, e, cell.color);
+            TriangulateEdgeFan(center, e, cell.Color);
+            features.AddFeature(cell, center, e.v1, e.v5);
         }
 
-        // 三角形外边区域
+        // 三角形外边区域 两个块之间的连接区域
         if (direction <= HexDirection.SE)
         {
             TriangulateConnection(direction, cell, e);
@@ -213,16 +229,31 @@ public class HexGridChunk : MonoBehaviour
                 }
 
             }
+            // 自己是湖泊 邻居不是
+            else if ( !neighbor.IsLakes() && neighbor.Elevation > cell.LakesLevel )
+            {
+                TriangulateWaterfallInWater(
+                    e2.v4, e2.v2, e1.v4, e1.v2,
+                    neighbor.RiverSurfaceY, cell.RiverSurfaceY,
+                    cell.LakesSurfaceY
+                );
+            }
         }
-        
 
-        if (cell.GetEdgeType(direction) == HexEdgeType.Slope)
+        HexEdgeType _type = cell.GetEdgeType(direction);
+        if (_type == HexEdgeType.Slope)
         {
             TriangulateEdgeTerraces(e1, cell, e2, neighbor);
         }
         else
         {
-            TriangulateEdgeStrip(e1, cell.color, e2, neighbor.color);
+            TriangulateEdgeStrip(e1, cell.Color, e2, neighbor.Color);
+
+            // 平坦的并且2个区域类型相同
+            if(_type == HexEdgeType.Flat && cell.TerrainType == neighbor.TerrainType)
+            {
+                features.AddFeature(cell, e1.v1, e1.v5, e2.v1, e2.v5);
+            }
         }
 
         // AddQuad(v1, v2, v3, v4);
@@ -272,28 +303,28 @@ public class HexGridChunk : MonoBehaviour
     void TriangulateEdgeTerraces(EdgeVertices begin, HexCell beginCell, EdgeVertices end, HexCell endCell)
     {
         EdgeVertices e2 = EdgeVertices.TerraceLerp(begin, end, 1);
-        Color c2 = HexMetrics.TerraceLerp(beginCell.color, endCell.color, 1);
+        Color c2 = HexMetrics.TerraceLerp(beginCell.Color, endCell.Color, 1);
 
-        TriangulateEdgeStrip(begin, beginCell.color, e2, c2);
+        TriangulateEdgeStrip(begin, beginCell.Color, e2, c2);
 
         for (int i = 2; i < HexMetrics.terraceSteps; i++)
         {
             EdgeVertices e1 = e2;
             Color c1 = c2;
             e2 = EdgeVertices.TerraceLerp(begin, end, i);
-            c2 = HexMetrics.TerraceLerp(beginCell.color, endCell.color, i);
+            c2 = HexMetrics.TerraceLerp(beginCell.Color, endCell.Color, i);
             TriangulateEdgeStrip(e1, c1, e2, c2);
         }
 
-        TriangulateEdgeStrip(e2, c2, end, endCell.color);
+        TriangulateEdgeStrip(e2, c2, end, endCell.Color);
 
 
         //Vector3 v3 = HexMetrics.TerraceLerp(beginLeft, endLeft, 1);
         //Vector3 v4 = HexMetrics.TerraceLerp(beginRight, endRight, 1);
-        //Color c2 = HexMetrics.TerraceLerp(beginCell.color, endCell.color, 1);
+        //Color c2 = HexMetrics.TerraceLerp(beginCell.Color, endCell.Color, 1);
 
         //AddQuad(beginLeft, beginRight, v3, v4);
-        //AddQuadColor(beginCell.color, c2);
+        //AddQuadColor(beginCell.Color, c2);
 
         //for (int i = 2; i < HexMetrics.terraceSteps; i++)
         //{
@@ -302,13 +333,13 @@ public class HexGridChunk : MonoBehaviour
         //    Color c1 = c2;
         //    v3 = HexMetrics.TerraceLerp(beginLeft, endLeft, i);
         //    v4 = HexMetrics.TerraceLerp(beginRight, endRight, i);
-        //    c2 = HexMetrics.TerraceLerp(beginCell.color, endCell.color, i);
+        //    c2 = HexMetrics.TerraceLerp(beginCell.Color, endCell.Color, i);
         //    AddQuad(v1, v2, v3, v4);
         //    AddQuadColor(c1, c2);
         //}
 
         //AddQuad(v3, v4, endLeft, endRight);
-        //AddQuadColor(c2, endCell.color);
+        //AddQuadColor(c2, endCell.Color);
     }
 
     // 渲染连接三边形及其颜色
@@ -371,7 +402,7 @@ public class HexGridChunk : MonoBehaviour
         else
         {
             terrain.AddTriangle(bottom, left, right);
-            terrain.AddTriangleColor(bottomCell.color, leftCell.color, rightCell.color);
+            terrain.AddTriangleColor(bottomCell.Color, leftCell.Color, rightCell.Color);
         }
     }
 
@@ -380,11 +411,11 @@ public class HexGridChunk : MonoBehaviour
     {
         Vector3 v3 = HexMetrics.TerraceLerp(begin, left, 1);
         Vector3 v4 = HexMetrics.TerraceLerp(begin, right, 1);
-        Color c3 = HexMetrics.TerraceLerp(beginCell.color, leftCell.color, 1);
-        Color c4 = HexMetrics.TerraceLerp(beginCell.color, rightCell.color, 1);
+        Color c3 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, 1);
+        Color c4 = HexMetrics.TerraceLerp(beginCell.Color, rightCell.Color, 1);
 
         terrain.AddTriangle(begin, v3, v4);
-        terrain.AddTriangleColor(beginCell.color, c3, c4);
+        terrain.AddTriangleColor(beginCell.Color, c3, c4);
 
         for (int i = 2; i < HexMetrics.terraceSteps; i++)
         {
@@ -394,14 +425,14 @@ public class HexGridChunk : MonoBehaviour
             Color c2 = c4;
             v3 = HexMetrics.TerraceLerp(begin, left, i);
             v4 = HexMetrics.TerraceLerp(begin, right, i);
-            c3 = HexMetrics.TerraceLerp(beginCell.color, leftCell.color, i);
-            c4 = HexMetrics.TerraceLerp(beginCell.color, rightCell.color, i);
+            c3 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, i);
+            c4 = HexMetrics.TerraceLerp(beginCell.Color, rightCell.Color, i);
             terrain.AddQuad(v1, v2, v3, v4);
             terrain.AddQuadColor(c1, c2, c3, c4);
         }
 
         terrain.AddQuad(v3, v4, left, right);
-        terrain.AddQuadColor(c3, c4, leftCell.color, rightCell.color);
+        terrain.AddQuadColor(c3, c4, leftCell.Color, rightCell.Color);
     }
 
     // 渲染连接三边形及其颜色 悬崖+2个斜面
@@ -409,7 +440,7 @@ public class HexGridChunk : MonoBehaviour
     {
         float b = 1f / (rightCell.Elevation - beginCell.Elevation);
         Vector3 boundary = Vector3.Lerp(begin, right, b);
-        Color boundaryColor = Color.Lerp(beginCell.color, rightCell.color, b);
+        Color boundaryColor = Color.Lerp(beginCell.Color, rightCell.Color, b);
 
         TriangulateBoundaryTriangle(
             begin, beginCell, left, leftCell, boundary, boundaryColor
@@ -424,30 +455,30 @@ public class HexGridChunk : MonoBehaviour
         else
         {
             terrain.AddTriangle(left, right, boundary);
-            terrain.AddTriangleColor(leftCell.color, rightCell.color, boundaryColor);
+            terrain.AddTriangleColor(leftCell.Color, rightCell.Color, boundaryColor);
         }
     }
 
     void TriangulateBoundaryTriangle(Vector3 begin, HexCell beginCell, Vector3 left, HexCell leftCell, Vector3 boundary, Color boundaryColor)
     {
         Vector3 v2 = HexMetrics.TerraceLerp(begin, left, 1);
-        Color c2 = HexMetrics.TerraceLerp(beginCell.color, leftCell.color, 1);
+        Color c2 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, 1);
 
         terrain.AddTriangle(begin, v2, boundary);
-        terrain.AddTriangleColor(beginCell.color, c2, boundaryColor);
+        terrain.AddTriangleColor(beginCell.Color, c2, boundaryColor);
 
         for (int i = 2; i < HexMetrics.terraceSteps; i++)
         {
             Vector3 v1 = v2;
             Color c1 = c2;
             v2 = HexMetrics.TerraceLerp(begin, left, i);
-            c2 = HexMetrics.TerraceLerp(beginCell.color, leftCell.color, i);
+            c2 = HexMetrics.TerraceLerp(beginCell.Color, leftCell.Color, i);
             terrain.AddTriangle(v1, v2, boundary);
             terrain.AddTriangleColor(c1, c2, boundaryColor);
         }
 
         terrain.AddTriangle(v2, left, boundary);
-        terrain.AddTriangleColor(c2, leftCell.color, boundaryColor);
+        terrain.AddTriangleColor(c2, leftCell.Color, boundaryColor);
     }
 
     void TriangulateCornerCliffTerraces(Vector3 begin, HexCell beginCell, Vector3 left, HexCell leftCell, Vector3 right, HexCell rightCell)
@@ -459,7 +490,7 @@ public class HexGridChunk : MonoBehaviour
         }
 
         Vector3 boundary = Vector3.Lerp(begin, left, b);
-        Color boundaryColor = Color.Lerp(beginCell.color, leftCell.color, b);
+        Color boundaryColor = Color.Lerp(beginCell.Color, leftCell.Color, b);
 
         TriangulateBoundaryTriangle(
             right, rightCell, begin, beginCell, boundary, boundaryColor
@@ -474,7 +505,7 @@ public class HexGridChunk : MonoBehaviour
         else
         {
             terrain.AddTriangle(left, right, boundary);
-            terrain.AddTriangleColor(leftCell.color, rightCell.color, boundaryColor);
+            terrain.AddTriangleColor(leftCell.Color, rightCell.Color, boundaryColor);
         }
     }
 
@@ -497,27 +528,23 @@ public class HexGridChunk : MonoBehaviour
         m.v3.y = e.v3.y;
 
 
-        //TriangulateEdgeStrip(m, cell.color, e, cell.color);
+        //TriangulateEdgeStrip(m, cell.Color, e, cell.Color);
 
         terrain.AddTriangle(e.v1, e.v2, m.v1);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
 
         terrain.AddQuad(e.v2, m.v1, e.v3, m.v3);
-        terrain.AddQuadColor(cell.color);
+        terrain.AddQuadColor(cell.Color);
         terrain.AddQuad(e.v3, m.v3, e.v4, m.v5);
-        terrain.AddQuadColor(cell.color);
+        terrain.AddQuadColor(cell.Color);
         terrain.AddTriangle(e.v4, e.v5, m.v5);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
     }
 
 
     // 画河道
     void TriangulateWithRiver(HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e)
     {
-
-        //Vector3 river_centerL = center + HexMetrics.GetFirstSolidCorner(direction.Previous()) * 0.25f;
-        //Vector3 river_centerR = center + HexMetrics.GetSecondSolidCorner(direction.Next()) * 0.25f;
-
         EdgeVertices m = new EdgeVertices(Vector3.Lerp(center, e.v1, 0.5f), Vector3.Lerp(center, e.v5, 0.5f));
         m.v3.y = e.v3.y;
 
@@ -543,8 +570,8 @@ public class HexGridChunk : MonoBehaviour
         EdgeVertices m = new EdgeVertices(Vector3.Lerp(center, e.v1, 0.5f), Vector3.Lerp(center, e.v5, 0.5f));
         m.v3.y = e.v3.y;
 
-        TriangulateEdgeStrip(m, cell.color, e, cell.color);
-        TriangulateEdgeFan(center, m, cell.color);
+        TriangulateEdgeStrip(m, cell.Color, e, cell.Color);
+        TriangulateEdgeFan(center, m, cell.Color);
 
         if (!cell.IsLakes())
         {
@@ -587,8 +614,13 @@ public class HexGridChunk : MonoBehaviour
 
         HexDirection outgoing_dir = outgoing_rivers[0];
 
+        // 有2个出水口，则一定是间隔一个的
+        if(outgoing_rivers.Count == 2)
+        {
+            TriangulateWithThreeRiverTwoOutConnection(cell, incoming_rivers[0], outgoing_rivers);
+        }
         // 2条河流，必定是 一条流入，一条流出
-        if (cell.GetRiverCount() == 2)
+        else if (cell.GetRiverCount() == 2)
         {
             TriangulateWithTwoRiverConnection(cell, incoming_rivers, outgoing_dir);
         }
@@ -622,16 +654,84 @@ public class HexGridChunk : MonoBehaviour
             //Debug.Log(string.Format(" landDir ({0}) out ({1}) ", landDir, outgoing_dir));
 
             // 有不是入水口的位置
-            if (landDir != outgoing_dir)
+            if (landDir != outgoing_dir && incoming_rivers.Count == 2)
             {
                 Debug.Log(string.Format("^^^^^^{0}", incoming_rivers.Count));
                 TriangulateWithThreeRiverConnection(cell, incoming_rivers, outgoing_dir, landDir);
             }
-            else // 总共4条河流，3个入水口
+            else if(incoming_rivers.Count == 3) // 总共4条河流，3个入水口
             {
                 TriangulateWithFourRiverConnection(cell, outgoing_dir);
             }
         }
+    }
+
+    // 渲染格子中心3段河流2条流出连接处
+    void TriangulateWithThreeRiverTwoOutConnection(HexCell cell, HexDirection incoming_river, List<HexDirection> outgoing_dirs)
+    {
+        Debug.Log("==================");
+        Vector3 center = cell.transform.localPosition;
+        EdgeVertices inEdge = new EdgeVertices(center + HexMetrics.GetFirstSolidCorner(incoming_river) * 0.5f, center + HexMetrics.GetSecondSolidCorner(incoming_river) * 0.5f);
+        inEdge.v3.y = cell.StreamBedY;
+
+        //EdgeVertices e = new EdgeVertices(center + HexMetrics.GetFirstSolidCorner(landDir) * 0.5f, center + HexMetrics.GetSecondSolidCorner(landDir) * 0.5f);
+
+        Vector3 center_d = new Vector3(center.x, cell.StreamBedY, center.z);
+        // d1,d2使按序列的 d1 一定比 d2小
+        HexDirection d1 = outgoing_dirs[0];
+        HexDirection d2 = outgoing_dirs[1];
+
+        EdgeVertices d1e = new EdgeVertices(center + HexMetrics.GetFirstSolidCorner(d1) * 0.5f, center + HexMetrics.GetSecondSolidCorner(d1) * 0.5f);
+        d1e.v3.y = cell.StreamBedY;
+
+        EdgeVertices d2e = new EdgeVertices(center + HexMetrics.GetFirstSolidCorner(d2) * 0.5f, center + HexMetrics.GetSecondSolidCorner(d2) * 0.5f);
+        d2e.v3.y = cell.StreamBedY;
+
+        if (incoming_river.Next().Next() == d2)
+        {
+            HexDirection _d = d1;
+            d1 = d2;
+            d2 = _d;
+
+            EdgeVertices _de = d1e;
+            d1e = d2e;
+            d2e = _de;
+        }
+
+        Vector3 v1 = Vector3.Lerp(d1e.v5, d2e.v1, 0.5f);
+        Vector3 inJoinV = Vector3.Lerp(v1, center, 0.25f);
+
+        // 汇合处顶部多余部分
+
+        terrain.AddTriangle(inJoinV, d1e.v5, d2e.v1);
+        terrain.AddTriangleColor(cell.Color);
+
+        terrain.AddQuad(d1e.v5, d1e.v3, inJoinV, center_d);
+        terrain.AddQuadColor(cell.Color);
+        terrain.AddQuad(inJoinV, center_d, d2e.v1, d2e.v3);
+        terrain.AddQuadColor(cell.Color);
+
+        terrain.AddTriangle(center_d, inEdge.v3, d1e.v3);
+        terrain.AddTriangleColor(cell.Color);
+        terrain.AddTriangle(center_d, d2e.v3, inEdge.v3);
+        terrain.AddTriangleColor(cell.Color);
+
+        terrain.AddQuad(d2e.v5, d2e.v3, inEdge.v1, inEdge.v3);
+        terrain.AddQuadColor(cell.Color);
+        terrain.AddQuad(inEdge.v5, inEdge.v3, d1e.v1, d1e.v3);
+        terrain.AddQuadColor(cell.Color);
+
+        //河流
+        //TriangulateRiverTriangle()
+        //rivers.AddTriangle(inJoinV, outEdge.v5, d1e.v1);
+        Vector3 inJoinVH = Vector3.Lerp(inJoinV, center_d, 0.5f);
+        TriangulateRiverQuad(inEdge.v4, inJoinVH, d1e.v1, d1e.v5, cell.RiverSurfaceY, cell.RiverSurfaceY, 0.4f, false);
+        TriangulateRiverQuad(inJoinVH, inEdge.v2, d2e.v1, d2e.v5, cell.RiverSurfaceY, cell.RiverSurfaceY, 0.4f, false);
+
+        rivers.AddTriangle(inJoinVH,
+            new Vector3(inEdge.v2.x, cell.RiverSurfaceY, inEdge.v2.z),
+            new Vector3(inEdge.v4.x, cell.RiverSurfaceY, inEdge.v4.z));
+        rivers.AddTriangleUV(new Vector2(0.6f, 0.6f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
     }
 
     // 渲染格子中心2段河流连接处
@@ -649,9 +749,9 @@ public class HexGridChunk : MonoBehaviour
 
         // 2侧河道
         terrain.AddQuad(inEdge.v1, outEdge.v5, inEdge.v3, outEdge.v3);
-        terrain.AddQuadColor(cell.color);
+        terrain.AddQuadColor(cell.Color);
         terrain.AddQuad(inEdge.v3, outEdge.v3, inEdge.v5, outEdge.v1);
-        terrain.AddQuadColor(cell.color);
+        terrain.AddQuadColor(cell.Color);
 
         //河流
         TriangulateRiverQuad(inEdge.v5, inEdge.v1, outEdge.v1, outEdge.v5, cell.RiverSurfaceY, cell.RiverSurfaceY, 0.4f, false);
@@ -664,10 +764,10 @@ public class HexGridChunk : MonoBehaviour
 
             // 补足非河道的高地
             terrain.AddTriangle(v1, inEdge.v1, outEdge.v5);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
 
             terrain.AddTriangle(inEdge.v5, v2, outEdge.v1);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
         }
         else
         {
@@ -676,7 +776,7 @@ public class HexGridChunk : MonoBehaviour
 
             // 补足非河道的高地
             terrain.AddQuad(e1.v1, e2.v5, e1.v5, e2.v1);
-            terrain.AddQuadColor(cell.color);
+            terrain.AddQuadColor(cell.Color);
         }
     }
 
@@ -721,22 +821,22 @@ public class HexGridChunk : MonoBehaviour
 
             // 汇合处顶部多余部分
             terrain.AddTriangle(inJoinV, d1e.v5, d2e.v1);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
 
             terrain.AddQuad(d1e.v5, d1e.v3, inJoinV, center_d);
-            terrain.AddQuadColor(cell.color);
+            terrain.AddQuadColor(cell.Color);
             terrain.AddQuad(inJoinV, center_d, d2e.v1, d2e.v3);
-            terrain.AddQuadColor(cell.color);
+            terrain.AddQuadColor(cell.Color);
 
             terrain.AddTriangle(center_d, outEdge.v3, d1e.v3);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
             terrain.AddTriangle(center_d, d2e.v3, outEdge.v3);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
 
             terrain.AddQuad(d2e.v5, d2e.v3, outEdge.v1, outEdge.v3);
-            terrain.AddQuadColor(cell.color);
+            terrain.AddQuadColor(cell.Color);
             terrain.AddQuad(outEdge.v5, outEdge.v3, d1e.v1, d1e.v3);
-            terrain.AddQuadColor(cell.color);
+            terrain.AddQuadColor(cell.Color);
 
             //河流
             //TriangulateRiverTriangle()
@@ -770,12 +870,12 @@ public class HexGridChunk : MonoBehaviour
                 v = outEdge.v5;
 
                 terrain.AddTriangle(center_d, d2e.v3, outEdge.v3);
-                terrain.AddTriangleColor(cell.color);
+                terrain.AddTriangleColor(cell.Color);
 
                 terrain.AddQuad(d2e.v3, outEdge.v3, d2e.v5, outEdge.v1);
-                terrain.AddQuadColor(cell.color);
+                terrain.AddQuadColor(cell.Color);
                 terrain.AddQuad(d1e.v1, outEdge.v5, d1e.v3, outEdge.v3);
-                terrain.AddQuadColor(cell.color);
+                terrain.AddQuadColor(cell.Color);
 
                 //河流 d1为对边
                 Vector3 v1 = Vector3.Lerp(d1e.v5, d2e.v1, 0.5f);
@@ -789,12 +889,12 @@ public class HexGridChunk : MonoBehaviour
             else
             {
                 terrain.AddTriangle(center_d, outEdge.v3, d1e.v3);
-                terrain.AddTriangleColor(cell.color);
+                terrain.AddTriangleColor(cell.Color);
 
                 terrain.AddQuad(d2e.v3, outEdge.v3, d2e.v5, outEdge.v1);
-                terrain.AddQuadColor(cell.color);
+                terrain.AddQuadColor(cell.Color);
                 terrain.AddQuad(d1e.v1, outEdge.v5, d1e.v3, outEdge.v3);
-                terrain.AddQuadColor(cell.color);
+                terrain.AddQuadColor(cell.Color);
 
                 //河流
                 Vector3 inJoinVH = Vector3.Lerp(d1e.v5, center_d, 0.5f);
@@ -804,21 +904,21 @@ public class HexGridChunk : MonoBehaviour
             }
 
             terrain.AddTriangle(e.v1, e.v5, v);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
 
             //terrain.AddQuad(d2e.v3, outEdge.v3, d2e.v5, outEdge.v1);
-            //terrain.AddQuadColor(cell.color);
+            //terrain.AddQuadColor(cell.Color);
             //terrain.AddQuad(d1e.v1, outEdge.v5, d1e.v3, outEdge.v3);
-            //terrain.AddQuadColor(cell.color);
+            //terrain.AddQuadColor(cell.Color);
 
             terrain.AddTriangle(center_d, d1e.v3, d1e.v5);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
             terrain.AddTriangle(center_d, d2e.v1, d2e.v3);
-            terrain.AddTriangleColor(cell.color);
+            terrain.AddTriangleColor(cell.Color);
 
             // 不上的三角
             //terrain.AddTriangle(center_d, d.v3, outEdge.v3);
-            //terrain.AddTriangleColor(cell.color);
+            //terrain.AddTriangleColor(cell.Color);
 
             
         }
@@ -842,30 +942,30 @@ public class HexGridChunk : MonoBehaviour
 
 
         terrain.AddQuad(outEdge.v5, outEdge.v3, d1e.v1, d1e.v3);
-        terrain.AddQuadColor(cell.color);
+        terrain.AddQuadColor(cell.Color);
         //terrain.AddTriangle(d1e.v1, d1e.v3, center_d);
-        //terrain.AddTriangleColor(cell.color);
+        //terrain.AddTriangleColor(cell.Color);
         terrain.AddTriangle(d1e.v3, d1e.v5, center_d);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
 
         terrain.AddTriangle(d2e.v1, d2e.v3, center_d);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
         terrain.AddTriangle(d2e.v3, d2e.v5, center_d);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
 
         terrain.AddTriangle(d3e.v1, d3e.v3, center_d);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
         //terrain.AddTriangle(d3e.v3, d3e.v5, center_d);
-        //terrain.AddTriangleColor(cell.color);
+        //terrain.AddTriangleColor(cell.Color);
 
         terrain.AddQuad(d3e.v5, d3e.v3, outEdge.v1, outEdge.v3);
-        terrain.AddQuadColor(cell.color);
+        terrain.AddQuadColor(cell.Color);
 
         terrain.AddTriangle(center_d, d3e.v3, outEdge.v3);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
 
         terrain.AddTriangle(center_d, outEdge.v3, d1e.v3);
-        terrain.AddTriangleColor(cell.color);
+        terrain.AddTriangleColor(cell.Color);
 
         //河流
         TriangulateRiverQuad(d1e.v4, d1e.v2, Vector3.Lerp(d1e.v5, center_d, 0.5f), outEdge.v4, cell.RiverSurfaceY, cell.RiverSurfaceY, 0.4f, false);
@@ -876,16 +976,16 @@ public class HexGridChunk : MonoBehaviour
 
     // 三角化方法以便在一个单元的中心和一条边之间创建一个三角扇形
     // 某方向的边  插入 4个4边行
-    void TriangulateEdgeFan(Vector3 center, EdgeVertices edge, Color color)
+    void TriangulateEdgeFan(Vector3 center, EdgeVertices edge, Color Color)
     {
         terrain.AddTriangle(center, edge.v1, edge.v2);
-        terrain.AddTriangleColor(color);
+        terrain.AddTriangleColor(Color);
         terrain.AddTriangle(center, edge.v2, edge.v3);
-        terrain.AddTriangleColor(color);
+        terrain.AddTriangleColor(Color);
         terrain.AddTriangle(center, edge.v3, edge.v4);
-        terrain.AddTriangleColor(color);
+        terrain.AddTriangleColor(Color);
         terrain.AddTriangle(center, edge.v4, edge.v5);
-        terrain.AddTriangleColor(color);
+        terrain.AddTriangleColor(Color);
     }
 
     // 对两条边之间一条四边形进行三角化的方法
@@ -926,7 +1026,7 @@ public class HexGridChunk : MonoBehaviour
     {
         v1.y = v2.y = v3.y = y;
         rivers.AddTriangle(v1, v2, v3);
-        //rivers.AddQuadColor(color);
+        //rivers.AddQuadColor(Color);
         rivers.AddTriangleUV(new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector3(0f, 1f));
     }
 
@@ -1003,36 +1103,45 @@ public class HexGridChunk : MonoBehaviour
             center2 + HexMetrics.GetFirstSolidCorner(direction.Opposite())
         );
 
-        lakesShore.AddQuad(e1.v1, e1.v2, e2.v1, e2.v2);
-        lakesShore.AddQuad(e1.v2, e1.v3, e2.v2, e2.v3);
-        lakesShore.AddQuad(e1.v3, e1.v4, e2.v3, e2.v4);
-        lakesShore.AddQuad(e1.v4, e1.v5, e2.v4, e2.v5);
-        lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
-        lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
-        lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
-        lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
-
-
-        // 多个格子的 三角形连接处
-        HexCell nextNeighbor = cell.GetNeighbor(direction.Next());
-        if (nextNeighbor != null)
+        // 这条边是否有河流
+        if (cell.HasRiverThroughEdge(direction))
         {
-            Vector3 v3 = nextNeighbor.Position + (nextNeighbor.IsLakes() ?
-                HexMetrics.GetFirstLakesCorner(direction.Previous()) :
-                HexMetrics.GetFirstSolidCorner(direction.Previous()));
-            v3.y = center.y;
-
-            lakesShore.AddTriangle(
-                e1.v5, e2.v5, v3
-            );
-
-            lakesShore.AddTriangleUV(
-                new Vector2(0f, 0f),
-                new Vector2(0f, 1f),
-                new Vector2(0f, nextNeighbor.IsLakes() ? 0f : 1f)
-            );
-
+            TriangulateEstuary(e1, e2, cell.IsInComingRiverDirection(direction));
         }
+        else
+        {
+
+            lakesShore.AddQuad(e1.v1, e1.v2, e2.v1, e2.v2);
+            lakesShore.AddQuad(e1.v2, e1.v3, e2.v2, e2.v3);
+            lakesShore.AddQuad(e1.v3, e1.v4, e2.v3, e2.v4);
+            lakesShore.AddQuad(e1.v4, e1.v5, e2.v4, e2.v5);
+            lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
+            lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
+            lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
+            lakesShore.AddQuadUV(0f, 0f, 0f, 1f);
+        }
+
+            // 多个格子的 三角形连接处
+            HexCell nextNeighbor = cell.GetNeighbor(direction.Next());
+            if (nextNeighbor != null)
+            {
+                Vector3 v3 = nextNeighbor.Position + (nextNeighbor.IsLakes() ?
+                    HexMetrics.GetFirstLakesCorner(direction.Previous()) :
+                    HexMetrics.GetFirstSolidCorner(direction.Previous()));
+                v3.y = center.y;
+
+                lakesShore.AddTriangle(
+                    e1.v5, e2.v5, v3
+                );
+
+                lakesShore.AddTriangleUV(
+                    new Vector2(0f, 0f),
+                    new Vector2(0f, 1f),
+                    new Vector2(0f, nextNeighbor.IsLakes() ? 0f : 1f)
+                );
+
+            }
+        
     }
 
     // 河水与湖泊入口处
@@ -1049,5 +1158,67 @@ public class HexGridChunk : MonoBehaviour
         v4 = Vector3.Lerp(v4, v2, t);
         rivers.AddQuadUnperturbed(v1, v2, v3, v4);
         rivers.AddQuadUV(0f, 1f, 0.8f, 1f);
+    }
+
+    // 河口
+    void TriangulateEstuary(EdgeVertices e1, EdgeVertices e2, bool incomingRiver)
+    {
+        // 补足缺口
+        lakesShore.AddTriangle(e2.v1, e1.v2, e1.v1);
+        lakesShore.AddTriangle(e2.v5, e1.v5, e1.v4);
+        lakesShore.AddTriangleUV( new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(0f, 0f) );
+        lakesShore.AddTriangleUV( new Vector2(0f, 1f), new Vector2(0f, 0f), new Vector2(0f, 0f) );
+
+        // 河口
+        estuaries.AddQuad(e2.v1, e1.v2, e2.v2, e1.v3);
+        estuaries.AddTriangle(e1.v3, e2.v2, e2.v4);
+        estuaries.AddQuad(e1.v3, e1.v4, e2.v4, e2.v5);
+
+        estuaries.AddQuadUV(
+            new Vector2(0f, 1f), new Vector2(0f, 0f),
+            new Vector2(1f, 1f), new Vector2(0f, 0f)
+        );
+        estuaries.AddTriangleUV(
+            new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(1f, 1f)
+        );
+        estuaries.AddQuadUV(
+            new Vector2(0f, 0f), new Vector2(0f, 0f),
+            new Vector2(1f, 1f), new Vector2(0f, 1f)
+        );
+
+
+        // 冲击水流
+        if (incomingRiver)
+        {
+            estuaries.AddQuadUV2(
+                new Vector2(1.5f, 1f), new Vector2(0.7f, 1.15f),
+                new Vector2(1f, 0.8f), new Vector2(0.5f, 1.1f)
+            );
+            estuaries.AddTriangleUV2(
+                new Vector2(0.5f, 1.1f),
+                new Vector2(1f, 0.8f),
+                new Vector2(0f, 0.8f)
+            );
+            estuaries.AddQuadUV2(
+                new Vector2(0.5f, 1.1f), new Vector2(0.3f, 1.15f),
+                new Vector2(0f, 0.8f), new Vector2(-0.5f, 1f)
+            );
+        }
+        else
+        {
+            estuaries.AddQuadUV2(
+                new Vector2(-0.5f, -0.2f), new Vector2(0.3f, -0.35f),
+                new Vector2(0f, 0f), new Vector2(0.5f, -0.3f)
+            );
+            estuaries.AddTriangleUV2(
+                new Vector2(0.5f, -0.3f),
+                new Vector2(0f, 0f),
+                new Vector2(1f, 0f)
+            );
+            estuaries.AddQuadUV2(
+                new Vector2(0.5f, -0.3f), new Vector2(0.7f, -0.35f),
+                new Vector2(1f, 0f), new Vector2(1.5f, -0.2f)
+            );
+        }
     }
 }

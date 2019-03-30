@@ -8,17 +8,6 @@ public enum HexEdgeType
     Flat, Slope, Cliff
 }
 
-public enum HexTerrainType
-{
-    Water,              // 水
-    Grassplot,          // 草地
-    Wood,               // 树林
-    Ridge,              // 山脊
-    Desert,             // 沙漠
-    Land,               // 土地
-}
-
-
 // 六边形 数据
 public class HexMetrics : MonoBehaviour
 {
@@ -144,7 +133,7 @@ public class HexMetrics : MonoBehaviour
             }
         }
 
-        return 0;
+        return hierarchyNum - 1;
     }
 
     // 每个网格的大小
@@ -157,10 +146,13 @@ public class HexMetrics : MonoBehaviour
     public const float maxRainElevation = 100f; //80f;
 
     // 干湿格子的最大蓄水量
-    public const float cellMaxPondage = 80f;//100f;
+    public const int cellMaxPondage = 100;//100f;
+
+    // 格子的蓄水量
+    public const int cellWaterStore = 80;//100f;
 
     // 每单位高度湖泊格子的最大蓄水量
-    public const float waterCellMaxPondage = 30f; //120f;//100f;
+    public const int waterCellMaxPondage = 10; //120f;//100f;
 
     // 河床高度
     public const float streamBedElevationOffset = -1f;
@@ -170,6 +162,12 @@ public class HexMetrics : MonoBehaviour
 
     public static Color[] terrainTypeColor = {
         //new Color(0.26f, 0.61f, 0.85f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
+        new Color(0.91f, 0.34f, 0.11f),
         new Color(0.91f, 0.34f, 0.11f),
         new Color(0.91f, 0.34f, 0.11f),
         new Color(0.91f, 0.34f, 0.11f),
@@ -204,5 +202,66 @@ public class HexMetrics : MonoBehaviour
         return (corners[(int)direction] + corners[(int)direction + 1]) *
             lakesBlendFactor;
     }
+
+
+
+    public static Texture2D noiseSource;
+    public const float noiseScale = 0.003f;
+    public const float cellPerturbStrength = 4f;
+
+    public static Vector4 SampleNoise(Vector3 position)
+    {
+        return noiseSource.GetPixelBilinear(
+            position.x * noiseScale,
+            position.z * noiseScale
+        );
+    }
+
+    public static Vector3 Perturb(Vector3 position)
+    {
+        Vector4 sample = SampleNoise(position);
+        position.x += (sample.x * 2f - 1f) * cellPerturbStrength;
+        position.z += (sample.z * 2f - 1f) * cellPerturbStrength;
+        return position;
+    }
+
+    // 在三角区域内，按密度随机生成N个点
+    public static Vector3[] RandomTriangleVectors(Vector3 A, Vector3 B, Vector3 C, float density)
+    {
+        float a = Vector3.Distance(A, B);
+        float b = Vector3.Distance(B, C);
+        float c = Vector3.Distance(C, A);
+
+        float p = (a + b + c) / 2.0f;//计算半周长
+        float area = Mathf.Sqrt(p * (p - a) * (p - b) * (p - c));//海伦公式求面积
+
+        int n = (int)(area * density);
+
+        Vector3[] positions = new Vector3[n];
+        for (int i = 0; i < n; i++)
+        {
+            // 扰乱位置
+            positions[i] = HexMetrics.RandomTriangleVector3(A, B, C);
+        }
+
+        return positions;
+    }
+
+    public static Vector3 RandomTriangleVector3(Vector3 A, Vector3 B, Vector3 C)
+    {
+        float r1 = Random.value;
+        float r2 = Random.value;
+        Vector3 P = (1 - Mathf.Sqrt(r1)) * A + Mathf.Sqrt(r1) * (1 - r2) * B + Mathf.Sqrt(r1) * r2 * C;
+        return P;
+    }
+
+    // 木头产量系数
+    public const float WoodDepositCoefficient = 0.01f;
+    // 石头产量系数
+    public const float QuarryDepositCoefficient = 0.3f;
+    // 铁产量系数
+    public const float IronDepositCoefficient = 0.1f;
+
+    public const int InitialCellResourceNum = 100;
 }
 

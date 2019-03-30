@@ -10,12 +10,12 @@ public class HexMesh : MonoBehaviour
     List<Vector3> vertices;
     List<int> triangles;
     List<Color> colors;
-    List<Vector2> uvs;
+    List<Vector2> uvs, uv2s;
 
     // 碰撞器
     MeshCollider meshCollider;
 
-    public bool useCollider, useColors, useUVCoordinates;
+    public bool useCollider, useColors, useUVCoordinates, useUV2Coordinates;
 
     void Awake()
     {
@@ -115,6 +115,29 @@ public class HexMesh : MonoBehaviour
         uvs.Add(new Vector2(uMax, vMax));
     }
 
+    public void AddTriangleUV2(Vector2 uv1, Vector2 uv2, Vector3 uv3)
+    {
+        uv2s.Add(uv1);
+        uv2s.Add(uv2);
+        uv2s.Add(uv3);
+    }
+
+    public void AddQuadUV2(Vector2 uv1, Vector2 uv2, Vector3 uv3, Vector3 uv4)
+    {
+        uv2s.Add(uv1);
+        uv2s.Add(uv2);
+        uv2s.Add(uv3);
+        uv2s.Add(uv4);
+    }
+
+    public void AddQuadUV2(float uMin, float uMax, float vMin, float vMax)
+    {
+        uv2s.Add(new Vector2(uMin, vMin));
+        uv2s.Add(new Vector2(uMax, vMin));
+        uv2s.Add(new Vector2(uMin, vMax));
+        uv2s.Add(new Vector2(uMax, vMax));
+    }
+
     public void Clear()
     {
         hexMesh.Clear();
@@ -131,6 +154,11 @@ public class HexMesh : MonoBehaviour
         {
             uvs = ListPool<Vector2>.Get();
         }
+        if (useUV2Coordinates)
+        {
+            uv2s = ListPool<Vector2>.Get();
+        }
+
         triangles = ListPool<int>.Get();
     }
 
@@ -147,6 +175,11 @@ public class HexMesh : MonoBehaviour
         {
             hexMesh.SetUVs(0, uvs);
             ListPool<Vector2>.Add(uvs);
+        }
+        if (useUV2Coordinates)
+        {
+            hexMesh.SetUVs(1, uv2s);
+            ListPool<Vector2>.Add(uv2s);
         }
         hexMesh.SetTriangles(triangles, 0);
         ListPool<int>.Add(triangles);
