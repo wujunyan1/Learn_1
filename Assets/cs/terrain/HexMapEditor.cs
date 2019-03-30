@@ -62,43 +62,11 @@ public class HexMapEditor : MonoBehaviour
         activeElevation = (int)elevation;
     }
 
-
-    public void Save()
-    {
-        string saveName = "test.map";
-        Debug.Log(Application.persistentDataPath);
-        string path = Path.Combine(Application.persistentDataPath, saveName);
-        using (
-            BinaryWriter writer = new BinaryWriter(File.Open(path, FileMode.Create))
-            )
-        {
-            writer.Write(saveName);
-            // 版本
-            writer.Write(1);
-            hexGrid.Save(writer);
-        }
-    }
-
-    public void Load()
-    {
-        string saveName = "test.map";
-        string path = Path.Combine(Application.persistentDataPath, saveName);
-        using (
-            BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open))
-        )
-        {
-            //Debug.Log(reader.ReadInt32());
-            if(reader.ReadString() == saveName)
-            {
-                int header = reader.ReadInt32();
-                hexGrid.Load(reader);
-            }
-        }
-    }
-
     public void New()
     {
         gameObject.SetActive(false);
         newMapMenu.Open();
     }
+
+
 }

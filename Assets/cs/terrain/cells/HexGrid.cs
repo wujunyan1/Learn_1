@@ -76,6 +76,7 @@ public class HexGrid : MonoBehaviour
 
         if (!CreateMap(data))
         {
+            Debug.Log("xxxxxxxxxxxxxx");
             return;
         }
 
