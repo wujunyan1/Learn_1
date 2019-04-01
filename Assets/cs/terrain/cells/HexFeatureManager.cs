@@ -17,6 +17,8 @@ public class HexFeatureManager : MonoBehaviour
     // 金
     public Transform[] goldPrefab;
 
+    public Transform[] buildsPrefab;
+
     Transform[] containers;
 
     void Awake()
@@ -171,5 +173,19 @@ public class HexFeatureManager : MonoBehaviour
 
             instance.SetParent(container, false);
         }
+    }
+
+    // 添加建筑物
+    public void AddBuildFeature(HexCell cell)
+    {
+        BuildType type = cell.Build.BuildType;
+        Transform container = GetFeatureTransform(cell);
+
+        Transform instance = Instantiate(buildsPrefab[(int)type]);
+        instance.localPosition = cell.Position;
+        instance.SetParent(container, false);
+
+        //MapBuild build = (MapBuild)instance.GetComponent("MapBuild");
+        //cell.Build = build;
     }
 }

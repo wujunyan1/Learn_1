@@ -7,7 +7,7 @@ using System;
 
 public class SaveLoadMenu : MonoBehaviour
 {
-    public HexGrid hexGrid;
+    public GameCenter gameCenter;
 
     /// <summary>
     ///  保存还是加载
@@ -89,7 +89,7 @@ public class SaveLoadMenu : MonoBehaviour
         {
             // 版本
             writer.Write(header);
-            hexGrid.Save(writer);
+            gameCenter.Save(writer);
         }
     }
 
@@ -113,7 +113,7 @@ public class SaveLoadMenu : MonoBehaviour
             Debug.Log(fileHeader);
             if (fileHeader == header)
             {
-                hexGrid.Load(reader);
+                gameCenter.Load(reader);
             }
         }
     }

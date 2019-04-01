@@ -121,6 +121,10 @@ public class HexGridChunk : MonoBehaviour
         cell.label.text = string.Format("{0}\n{1}\n{2}", cell.index, (int)cell.Height, cell.TerrainType);
 
         //features.AddFeature(cell);
+        if(cell.Build != null)
+        {
+            features.AddBuildFeature(cell);
+        }
     }
 
     // 渲染某个方向的三角形
@@ -1334,5 +1338,15 @@ public class HexGridChunk : MonoBehaviour
                 new Vector2(1f, 0f), new Vector2(1.5f, -0.2f)
             );
         }
+    }
+
+
+    // 添加建筑
+    public void AddBuild(HexCell cell, BuildType type)
+    {
+        MapBuildFactory.CreateMapBuild(cell, type);
+
+        Refresh(cell);
+        //features.AddBuildFeature(cell);
     }
 }

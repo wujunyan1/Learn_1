@@ -76,15 +76,6 @@ public class HexCell : MonoBehaviour
         }
     }
 
-    // 颜色
-    public Color Color
-    {
-        get
-        {
-            return HexMetrics.GetTerrainTypeColor(terrainType); ;
-        }
-    }
-
     // 旁边的
     [SerializeField]
     HexCell[] neighbors;
@@ -104,6 +95,20 @@ public class HexCell : MonoBehaviour
         set
         {
             terrainType = value;
+        }
+    }
+
+    // 建筑物
+    MapBuild build = null;
+    public MapBuild Build
+    {
+        get
+        {
+            return build;
+        }
+        set
+        {
+            build = value;
         }
     }
 
@@ -211,6 +216,7 @@ public class HexCell : MonoBehaviour
             writer.Write((byte)rivers[i]);
         }
 
+        MapBuildFactory.Save(build, writer);
     }
 
     public void Load(BinaryReader reader)
@@ -229,6 +235,7 @@ public class HexCell : MonoBehaviour
             rivers[i] = (RiverDirection)reader.ReadByte();
         }
 
+        build = MapBuildFactory.Load(reader);
     }
 
     void RefreshPosition()

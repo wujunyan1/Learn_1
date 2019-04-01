@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class UiManager : MonoBehaviour
 {
-    public HexMapEditor hexMapEditor;
+    public GameObject baseMenu;
     public NewMapMenu newMapMenu;
 
     bool menuOpen = false;
@@ -28,14 +28,14 @@ public class UiManager : MonoBehaviour
     {
         menuOpen = true;
         CameraMove.Locked = true;
-        hexMapEditor.gameObject.SetActive(true);
+        baseMenu.SetActive(true);
     }
 
     void Close()
     {
         menuOpen = false;
         CameraMove.Locked = false;
-        hexMapEditor.gameObject.SetActive(false);
+        baseMenu.SetActive(false);
 
         if (newMapMenu.gameObject.activeSelf)
         {

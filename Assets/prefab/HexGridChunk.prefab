@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1835228759181048239}
   - component: {fileID: 5515872118176229341}
   - component: {fileID: 5699227701307686250}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Estuaries
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -107,7 +107,7 @@ GameObject:
   - component: {fileID: 5396802989457724592}
   - component: {fileID: 2782193716222978759}
   - component: {fileID: 6274436789507835906}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: LakesShore
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -202,7 +202,7 @@ GameObject:
   - component: {fileID: 7037730759646601924}
   - component: {fileID: 7037730759646601927}
   - component: {fileID: 7037730759646601926}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -297,7 +297,7 @@ GameObject:
   - component: {fileID: 7037730759788439035}
   - component: {fileID: 7037730759788439034}
   - component: {fileID: 7037730759788439037}
-  m_Layer: 5
+  m_Layer: 9
   m_Name: PosCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -393,7 +393,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7037730759975896851}
   - component: {fileID: 7037730759975896850}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: HexGridChunk
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -453,7 +453,7 @@ GameObject:
   - component: {fileID: 4148567334819744963}
   - component: {fileID: 5632553516218678337}
   - component: {fileID: 3767579868160310771}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Lakes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -546,7 +546,7 @@ GameObject:
   m_Component:
   - component: {fileID: 205173728888725683}
   - component: {fileID: 8954919263627721838}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Features
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -598,6 +598,8 @@ MonoBehaviour:
   - {fileID: 5223781008140424755, guid: eeda975da30ab91459b88f4e69222a6c, type: 3}
   goldPrefab:
   - {fileID: 4147114331781828, guid: 12e9464cdee661145b79b61ddcbdb917, type: 3}
+  buildsPrefab:
+  - {fileID: 622461603689357900, guid: 2a9d12ea38fa3b145842c91386ef3015, type: 3}
 --- !u!1 &8858304042081704511
 GameObject:
   m_ObjectHideFlags: 0
@@ -610,7 +612,7 @@ GameObject:
   - component: {fileID: 2812541170995649485}
   - component: {fileID: 2932952471183301917}
   - component: {fileID: 5559769978650163725}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Rivers
   m_TagString: Untagged
   m_Icon: {fileID: 0}

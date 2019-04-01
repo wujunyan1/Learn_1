@@ -7,6 +7,8 @@ using System.IO;
 // 网格，整个六边形地图
 public class HexGrid : MonoBehaviour
 {
+    public static HexGrid instance;
+
     public int cellCountX = 6;
     public int cellCountZ = 6;
 
@@ -95,6 +97,7 @@ public class HexGrid : MonoBehaviour
     // 初始化地图
     public void Awake()
     {
+        instance = this;
         HexMetrics.noiseSource = noiseSource;
 
         //CreateMap(cellCountX, cellCountZ);
@@ -284,6 +287,12 @@ public class HexGrid : MonoBehaviour
         HexCoordinates coordinates = HexCoordinates.FromPosition(position);
         int index = coordinates.X + coordinates.Z * cellCountX + coordinates.Z / 2;
         return cells[index];
+    }
+
+    // 获取坐标的格子
+    public HexCell GetCell(int cellIndex)
+    {
+        return cells[cellIndex];
     }
 
     public void Refresh()
