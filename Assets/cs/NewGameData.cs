@@ -44,4 +44,6 @@ public class NewGameData
         this.z = z;
         cellCount = x + z;
     }
+
+    public int campNum;
 }

@@ -84,13 +84,8 @@ public class HexGrid : MonoBehaviour
         {
             cells[i].Load(reader);
         }
-        for (int i = 0; i < chunks.Length; i++)
-        {
-            chunks[i].Refresh();
-        }
-
+        
     }
-
 
     // 初始化地图
     public void Awake()
@@ -290,6 +285,11 @@ public class HexGrid : MonoBehaviour
     public HexCell GetCell(int xOffset, int zOffset)
     {
         return cells[xOffset + zOffset * cellCountX];
+    }
+
+    public HexCell GetCell(Point point)
+    {
+        return GetCell(point.x, point.z);
     }
 
     // 获取坐标的格子

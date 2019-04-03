@@ -112,6 +112,9 @@ public class HexCell : MonoBehaviour
         }
     }
 
+    // 属于的城市地块
+    public City city;
+
     public HexGridChunk chunk;
 
     // 降雨量
@@ -505,5 +508,49 @@ public class HexCell : MonoBehaviour
         return neighbor && (
             elevation >= neighbor.elevation || lakesLevel == neighbor.elevation
         );
+    }
+
+
+
+    /// <summary>
+    /// 判断能否建筑这个建筑物
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public bool CanBuild(BuildType type)
+    {
+        bool res = false;
+        switch (type)
+        {
+            case BuildType.City:
+                res = CanBuildCity();
+                break;
+        }
+
+        return res;
+    }
+
+    bool CanBuildCity()
+    {
+        if(TerrainType == HexTerrainType.Water || TerrainType == HexTerrainType.Ridge)
+        {
+            return false;
+        }
+
+        if(city != null)
+        {
+            return false;
+        }
+
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
+        {
+            HexCell neighbor = GetNeighbor(dir);
+            if (neighbor && neighbor.city != null)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
 
 /// <summary>
 /// 阵容
@@ -22,11 +23,32 @@ public class Camp : RoundObject
     // 金钱
     int money;
 
+    public Camp(int id)
+    {
+        this.id = id;
+    }
+
     public override void NextRound()
     {
         foreach(City city in citys)
         {
             city.NextRound();
+        }
+    }
+
+    public void Save(BinaryWriter writer)
+    {
+        foreach (City city in citys)
+        {
+            city.Save(writer);
+        }
+    }
+
+    public void Load(BinaryReader reader)
+    {
+        foreach (City city in citys)
+        {
+            city.Load(reader);
         }
     }
 }

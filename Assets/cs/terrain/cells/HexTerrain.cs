@@ -4,14 +4,41 @@ using UnityEngine;
 
 public enum HexTerrainType
 {
+    /// <summary>
+    /// 水
+    /// </summary>
     Water,              // 水
+    /// <summary>
+    /// 草地
+    /// </summary>
     Grassplot,          // 草地
+    /// <summary>
+    /// 树林
+    /// </summary>
     Wood,               // 树林
+    /// <summary>
+    /// 山脊 // 不可移动
+    /// </summary>
     Ridge,              // 山脊 // 不可移动
+    /// <summary>
+    /// 沙漠
+    /// </summary>
     Desert,             // 沙漠
+    /// <summary>
+    /// 土地
+    /// </summary>
     Land,               // 土地
+    /// <summary>
+    /// 石矿
+    /// </summary>
     Quarry,             // 石矿
+    /// <summary>
+    /// 铁矿
+    /// </summary>
     Iron,               // 铁矿
+    /// <summary>
+    /// 金矿
+    /// </summary>
     Gold,               // 金矿
 }
 

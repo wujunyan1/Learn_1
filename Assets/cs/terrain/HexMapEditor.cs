@@ -105,12 +105,15 @@ public class HexMapEditor : MonoBehaviour
     // 显示创建建筑面板
     void ShowCreateButton(HexCell cell)
     {
-        Debug.Log(string.Format("------------- {0}", cell.index));
+        if (cell.CanBuild(BuildType.City))
+        {
+            Debug.Log(string.Format("------------- {0}", cell.index));
 
-        createButtonShow.Obj = selectCell.gameObject;
-        createButton.SetActive(true);
-        Vector3 v = cell.Position;
-        v.y += 1;
+            createButtonShow.Obj = selectCell.gameObject;
+            createButton.SetActive(true);
+            Vector3 v = cell.Position;
+            v.y += 1;
+        }
     }
 
 

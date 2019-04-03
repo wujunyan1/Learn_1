@@ -27,6 +27,10 @@ public class NewMapMenu : MonoBehaviour
     public Text defaultMapSeedText;
     public Text mapSeedText;
 
+    public Text defaultCampNumText;
+    public Text campNumText;
+    int campNum;
+
     public MapSizeType MapSize
     {
         get
@@ -42,7 +46,8 @@ public class NewMapMenu : MonoBehaviour
 
     private void Awake()
     {
-        
+        // 默认起始2个阵容
+        campNum = 2;
     }
 
     public void Open()
@@ -54,6 +59,8 @@ public class NewMapMenu : MonoBehaviour
         mapSeed = (int)(ret % 100000);
 
         mapSeedText.text = defaultMapSeedText.text = string.Format("{0}", mapSeed);
+
+        defaultCampNumText.text = campNumText.text = string.Format("{0}", campNum);
     }
 
     public void Close() {
@@ -89,10 +96,23 @@ public class NewMapMenu : MonoBehaviour
         Debug.Log(mapSeed);
     }
 
+    public void CampNumInputEnd()
+    {
+        Debug.Log(campNumText.text);
+
+        int newCampNum;
+        if (int.TryParse(campNumText.text, out newCampNum))
+        {
+            campNum = newCampNum;
+        }
+        Debug.Log(campNum);
+    }
+
     public void NewGame()
     {
         NewGameData data = new NewGameData((int)mapSize, (int)mapSize);
         data.mapSeed = mapSeed;
+        data.campNum = campNum;
 
         //mapGenerator.GenerateMap(data);
         gameCenter.GenerateMap(data);

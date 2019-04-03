@@ -44,6 +44,14 @@ public class City : MapBuild
         cells = new List<HexCell>();
 
         AddHexCell(cell);
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
+        {
+            HexCell neighbor = cell.GetNeighbor(dir);
+            if (neighbor)
+            {
+                AddHexCell(neighbor);
+            }
+        }
 
         CityBuildFactory.CreateCityBuild(this, CityBuildType.Barracks);
     }
@@ -82,8 +90,13 @@ public class City : MapBuild
         for (int i = 0; i < cellNum; i++)
         {
             int cellIndex = reader.ReadInt32();
-            cells.Add(HexGrid.instance.GetCell(cellIndex));
+            HexCell cell = HexGrid.instance.GetCell(cellIndex);
+            cells.Add(cell);
+            cell.city = this;
         }
+
+        HexCell currCell = HexGrid.instance.GetCell(point);
+        currCell.Build = this;
     }
 
     // 下一回合
