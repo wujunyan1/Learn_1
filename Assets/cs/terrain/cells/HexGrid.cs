@@ -71,9 +71,7 @@ public class HexGrid : MonoBehaviour
     public void Load(BinaryReader reader)
     {
         // 大小和种子
-        NewGameData data = new NewGameData();
-        data.x = reader.ReadInt32();
-        data.z = reader.ReadInt32();
+        NewGameData data = new NewGameData(reader.ReadInt32(), reader.ReadInt32());
         data.mapSeed = reader.ReadInt32();
 
         if (!CreateMap(data))
@@ -105,8 +103,8 @@ public class HexGrid : MonoBehaviour
 
     public bool CreateMap(NewGameData data)
     {
-        int x = data.x;
-        int z = data.z;
+        int x = data.X;
+        int z = data.Z;
         int mapSeed = data.mapSeed;
         if (x <= 0 || x % HexMetrics.chunkSizeX != 0 || z <= 0 || z % HexMetrics.chunkSizeZ != 0 )
         {
@@ -287,6 +285,11 @@ public class HexGrid : MonoBehaviour
         HexCoordinates coordinates = HexCoordinates.FromPosition(position);
         int index = coordinates.X + coordinates.Z * cellCountX + coordinates.Z / 2;
         return cells[index];
+    }
+
+    public HexCell GetCell(int xOffset, int zOffset)
+    {
+        return cells[xOffset + zOffset * cellCountX];
     }
 
     // 获取坐标的格子

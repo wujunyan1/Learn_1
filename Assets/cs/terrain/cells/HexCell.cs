@@ -216,7 +216,7 @@ public class HexCell : MonoBehaviour
             writer.Write((byte)rivers[i]);
         }
 
-        MapBuildFactory.Save(build, writer);
+        //MapBuildFactory.Save(build, writer);
     }
 
     public void Load(BinaryReader reader)
@@ -235,7 +235,7 @@ public class HexCell : MonoBehaviour
             rivers[i] = (RiverDirection)reader.ReadByte();
         }
 
-        build = MapBuildFactory.Load(reader);
+        //build = MapBuildFactory.Load(reader);
     }
 
     void RefreshPosition()

@@ -18,7 +18,5 @@ public class HexCoordinatesDrawer : PropertyDrawer
         GUI.Label(position, coordinates.ToString());
     }
 
-
-
 }
 

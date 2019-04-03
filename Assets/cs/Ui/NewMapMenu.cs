@@ -12,7 +12,10 @@ public enum MapSizeType
 
 public class NewMapMenu : MonoBehaviour
 {
-    public HexGrid grid;
+    //public HexGrid grid;
+
+    public HexMapGenerator mapGenerator;
+    public GameCenter gameCenter;
 
     // 选择大小
     public GameObject chooseSize;
@@ -88,11 +91,11 @@ public class NewMapMenu : MonoBehaviour
 
     public void NewGame()
     {
-        NewGameData data = new NewGameData();
-        data.x = data.z = (int)mapSize;
+        NewGameData data = new NewGameData((int)mapSize, (int)mapSize);
         data.mapSeed = mapSeed;
 
-        grid.CreateMap(data);
+        //mapGenerator.GenerateMap(data);
+        gameCenter.GenerateMap(data);
 
         Close();
     }

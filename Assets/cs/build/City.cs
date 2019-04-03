@@ -44,6 +44,8 @@ public class City : MapBuild
         cells = new List<HexCell>();
 
         AddHexCell(cell);
+
+        CityBuildFactory.CreateCityBuild(this, CityBuildType.Barracks);
     }
 
     public override void SaveData(BinaryWriter writer)
@@ -72,7 +74,8 @@ public class City : MapBuild
         int buildNum = reader.ReadByte();
         for (int i = 0; i < buildNum; i++)
         {
-
+            CityBuild build = CityBuildFactory.CreateCityBuild(this, (CityBuildType)reader.ReadByte());
+            build.Load(reader);
         }
 
         int cellNum = reader.ReadByte();
@@ -87,6 +90,11 @@ public class City : MapBuild
     public override void NextRound()
     {
         // 人口变化
+
+        foreach (CityBuild build in builds)
+        {
+            build.NextRound();
+        }
     }
 
     public void AddHexCell(HexCell cell)
@@ -107,5 +115,19 @@ public class City : MapBuild
     public void RemoveBuilds(int index)
     {
         builds.RemoveAt(index);
+    }
+
+    public T GetBuild<T>() where T : CityBuild
+    {
+        T t = default;
+        foreach (CityBuild build in builds)
+        {
+            if(build.GetType() == typeof(T))
+            {
+                t = (T)build;
+            }
+        }
+
+        return t;
     }
 }
