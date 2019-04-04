@@ -115,6 +115,9 @@ public class HexCell : MonoBehaviour
     // 属于的城市地块
     public City city;
 
+    // 人物
+    public PersonControl person;
+
     public HexGridChunk chunk;
 
     // 降雨量
@@ -156,7 +159,6 @@ public class HexCell : MonoBehaviour
         set
         {
             pondage = value;
-            label.text = string.Format("{0}\n{1}\n{2}", index, (int)height, (int)pondage);
         }
     }
     
@@ -198,6 +200,22 @@ public class HexCell : MonoBehaviour
 
     // 河流
     RiverDirection[] rivers;
+
+
+    int distance;
+    public int Distance
+    {
+        get
+        {
+            return distance;
+        }
+        set
+        {
+            distance = value;
+            UpdateDistanceLabel();
+        }
+    }
+
 
     public void Awake()
     {
@@ -553,4 +571,15 @@ public class HexCell : MonoBehaviour
 
         return true;
     }
+
+    /// <summary>
+    /// 更像距离的显示
+    /// </summary>
+    void UpdateDistanceLabel()
+    {
+        Text label = uiRect.GetComponent<Text>();
+        label.text = distance.ToString();
+    }
+
+
 }

@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>
 /// 在3d物品上 显示按钮
 /// </summary>
-public class ButtonShow : MonoBehaviour
+public class UIShow : MonoBehaviour
 {
     // 偏移坐标
     public Vector3 offset;
@@ -13,7 +13,7 @@ public class ButtonShow : MonoBehaviour
     /// <summary>
     /// 3d物品
     /// </summary>
-    GameObject obj;
+    public GameObject obj;
 
     public GameObject Obj
     {
@@ -31,7 +31,7 @@ public class ButtonShow : MonoBehaviour
     /// <summary>
     /// 显示的按钮
     /// </summary>
-    public GameObject showButton;
+    public GameObject showUI;
 
     // 按钮默认大小
     private Vector3 baseScale;
@@ -43,7 +43,12 @@ public class ButtonShow : MonoBehaviour
         //计算以下默认的距离
         baseFomat = Vector3.Distance(Vector3.zero, Camera.main.transform.position);
 
-        baseScale = showButton.transform.localScale;
+        if (!showUI)
+        {
+            showUI = gameObject;
+        }
+
+        baseScale = showUI.transform.localScale;
         currentFomat = 0;
     }
 
@@ -52,13 +57,17 @@ public class ButtonShow : MonoBehaviour
     {
         if (baseFomat != currentFomat)
         {
+            if (!obj)
+            {
+                Debug.Log(name);
+            }
             Vector3 newPos = obj.transform.position + offset;
             //保存当前相机到文字UI的距离
             currentFomat = Vector3.Distance(newPos, Camera.main.transform.position);
 
             float myscale = baseFomat / currentFomat;  //计算出缩放比例 
-            showButton.transform.position = WorldToUI(newPos); //计算UI显示的位置
-            showButton.transform.localScale = baseScale * myscale;           //缩放UI 
+            showUI.transform.position = WorldToUI(newPos); //计算UI显示的位置
+            showUI.transform.localScale = baseScale * myscale;           //缩放UI 
         }
     }
 

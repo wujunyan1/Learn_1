@@ -18,7 +18,7 @@ public class HexMapEditor : MonoBehaviour
     HexCell selectCell;
 
     public GameObject createButton;
-    ButtonShow createButtonShow;
+    UIShow createButtonShow;
 
     // 城市界面
     public CityView cityView;
@@ -40,7 +40,7 @@ public class HexMapEditor : MonoBehaviour
         targetMask = LayerMask.GetMask("Map");
         noMask = LayerMask.GetMask("UI");
 
-        createButtonShow = createButton.GetComponent<ButtonShow>();
+        createButtonShow = createButton.GetComponent<UIShow>();
         //Transform child = transform.Find("CreateBuild");
         //createButton = child.gameObject;
     }
@@ -62,12 +62,13 @@ public class HexMapEditor : MonoBehaviour
         Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
-        Debug.Log(string.Format("-------------"));
+        Debug.Log(string.Format("------------- {0} {1}", Physics.Raycast(inputRay, out hit, 200f, noMask), Physics.Raycast(inputRay, out hit, 200f, targetMask)));
 
         // 没有碰到不需要的layer 并且碰到地图
         if ( !Physics.Raycast(inputRay, out hit, 200f, noMask) 
             && Physics.Raycast(inputRay, out hit, 200f, targetMask))  // && !EventSystem.current.IsPointerOverGameObject()
         {
+            Debug.Log(isShow);
             if (isShow)
             {
                 CloseHexCellMessage();
@@ -84,6 +85,16 @@ public class HexMapEditor : MonoBehaviour
     {
         isShow = true;
         selectCell = cell;
+
+        Debug.Log("1111111111111");
+
+        PersonControl person = cell.person;
+        if(person != null)
+        {
+            Debug.Log("22222222222222");
+            person.ShowView();
+            return;
+        }
 
         // 存在建筑则显示建筑信息
         MapBuild build = cell.Build;
@@ -121,6 +132,13 @@ public class HexMapEditor : MonoBehaviour
     {
         CloseCreateButton();
 
+        PersonControl person = selectCell.person;
+        if (person != null)
+        {
+            Debug.Log("44444444");
+            person.CloseView();
+        }
+
         isShow = false;
         selectCell = null;
         closeFrame = true;
@@ -129,11 +147,7 @@ public class HexMapEditor : MonoBehaviour
     // 关闭创建建筑面板
     void CloseCreateButton()
     {
-        isShow = false;
         createButton.SetActive(false);
-        selectCell = null;
-
-        closeFrame = true;
     }
     
     public void OnBuildButton()

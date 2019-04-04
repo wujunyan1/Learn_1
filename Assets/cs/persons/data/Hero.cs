@@ -6,7 +6,7 @@ using System.IO;
 /// <summary>
 /// 英雄
 /// </summary>
-public class Hero
+public class Hero : Person
 {
     int id;
     public int Id

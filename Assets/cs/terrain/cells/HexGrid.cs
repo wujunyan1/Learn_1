@@ -20,6 +20,8 @@ public class HexGrid : MonoBehaviour
     HexGridChunk[] chunks;
     HexCell[] cells;
 
+    public Transform objPlane;
+
     // 显示信息
     public Text cellLabelPrefab;
 
@@ -340,7 +342,6 @@ public class HexGrid : MonoBehaviour
             }
 
             cell.Rain = rain;
-            cell.label.text = string.Format("{0}\n{1}\n{2}", index, (int)height, (int)cell.TerrainType);
         }
 
 
@@ -870,6 +871,16 @@ public class HexGrid : MonoBehaviour
         {
             HexTerrain.SetTerrainType(cell);
             HexTerrain.SetCellStore(cell);
+        }
+    }
+
+
+
+    public void FindDistancesTo(HexCell cell)
+    {
+        for (int i = 0; i < cells.Length; i++)
+        {
+            cells[i].Distance = 0;
         }
     }
 }

@@ -10,6 +10,10 @@ public class GameCenter : MonoBehaviour
 
     public HexGrid grid;
 
+    public ObjGenerate objGenerate;
+
+    public Transform camera;
+
     int playerCampId = 0;
 
     /// <summary>
@@ -67,18 +71,13 @@ public class GameCenter : MonoBehaviour
             camp.Load(reader);
         }
 
-        // 数据Load完之后再刷地图
-        grid.Refresh();
-
-        roundText.text = string.Format("{0}", round);
-        basePanel.SetActive(true);
+        LoadGenerateMapEnd();
     }
 
     public void GenerateMap(NewGameData data)
     {
         round = 0;
         grid.CreateMap(data);
-        roundText.text = string.Format("{0}", round);
 
         int campNum = data.campNum;
         for(int i = 0; i < campNum; i++)
@@ -86,9 +85,22 @@ public class GameCenter : MonoBehaviour
             AddCamp();
         }
 
+        LoadGenerateMapEnd();
+    }
+
+    /// <summary>
+    /// 数据加载完之后
+    /// </summary>
+    void LoadGenerateMapEnd()
+    {
         // 数据Load完之后再刷地图
         grid.Refresh();
 
+        // 再修改摄像机位置，放置到对应阵营建造者上
+        Transform transform = GetPlayerCenterTransform();
+        ResetCamera(transform);
+
+        roundText.text = string.Format("{0}", round);
         basePanel.SetActive(true);
     }
 
@@ -112,5 +124,43 @@ public class GameCenter : MonoBehaviour
     public Camp GetCamp(int id)
     {
         return camps[id];
+    }
+
+    public void GenerateCreater(Creater creater)
+    {
+        objGenerate.GenerateCreater(creater);
+    }
+
+
+    /// <summary>
+    /// 获取玩家的中心位置
+    /// </summary>
+    /// <returns></returns>
+    public Transform GetPlayerCenterTransform()
+    {
+        Camp camp = GetCamp(playerCampId);
+        City city = camp.GetCity(0);
+        if(city != null)
+        {
+            HexCell cityCell = grid.GetCell(city.GetPoint());
+            return cityCell.transform;
+        }
+
+        Creater creater = camp.GetCreater(0);
+        HexCell cell = grid.GetCell(creater.point);
+        return cell.transform;
+    }
+
+    /// <summary>
+    /// 使摄像机 观看这个对象
+    /// </summary>
+    /// <param name="transform"></param>
+    public void ResetCamera(Transform transform)
+    {
+        Vector3 vector = transform.localPosition;
+        vector.y += 10;
+        camera.transform.localPosition = vector;
+
+        camera.transform.Translate(Vector3.forward * -1 * 30);
     }
 }

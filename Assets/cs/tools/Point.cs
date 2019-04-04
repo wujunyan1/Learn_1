@@ -18,4 +18,10 @@ public class Point
         this.x = x;
         this.z = z;
     }
+
+    public Vector3 GetPosition()
+    {
+        HexCell cell = HexGrid.instance.GetCell(this);
+        return cell.Position;
+    }
 }

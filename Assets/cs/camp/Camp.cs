@@ -20,12 +20,20 @@ public class Camp : RoundObject
     // 拥有的城市
     List<City> citys;
 
+    // 建造者
+    List<Creater> creaters;
+
     // 金钱
     int money;
 
     public Camp(int id)
     {
         this.id = id;
+
+        citys = new List<City>();
+        creaters = new List<Creater>();
+
+        AddCreater(RandomCreatCreater());
     }
 
     public override void NextRound()
@@ -50,5 +58,51 @@ public class Camp : RoundObject
         {
             city.Load(reader);
         }
+    }
+
+    public Creater CreatCreater(Point point)
+    {
+        Creater creater = new Creater(point);
+        return creater;
+    }
+
+    public Creater RandomCreatCreater()
+    {
+        HexGrid grid = GameCenter.instance.grid;
+        int maxX = grid.cellCountX;
+        int maxY = grid.cellCountZ;
+
+        while (true)
+        {
+            int x = Random.Range(0, maxX);
+            int y = Random.Range(0, maxY);
+
+            HexCell cell = grid.GetCell(x, y);
+            if(cell.TerrainType != HexTerrainType.Water && cell.TerrainType != HexTerrainType.Ridge)
+            {
+                return CreatCreater(new Point(x, y));
+            }
+        }
+    }
+
+    public void AddCreater(Creater creater)
+    {
+        creater.camp = this;
+        creaters.Add(creater);
+        GameCenter.instance.GenerateCreater(creater);
+    }
+
+    public City GetCity(int index)
+    {
+        if(index >= citys.Count)
+        {
+            return null;
+        }
+        return citys[index];
+    }
+
+    public Creater GetCreater(int index)
+    {
+        return creaters[index];
     }
 }
