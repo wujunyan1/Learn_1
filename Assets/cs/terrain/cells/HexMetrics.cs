@@ -67,6 +67,11 @@ public class HexMetrics : MonoBehaviour
         return corners[(int)direction + 1] * solidFactor;
     }
 
+    public static Vector3 GetSolidCorner(HexDirection direction)
+    {
+        return (corners[(int)direction] + corners[(int)direction + 1]) * solidFactor / 2;
+    }
+
     public static Vector3 GetBridge(HexDirection direction)
     {
         return (corners[(int)direction] + corners[(int)direction + 1]) * blendFactor;
@@ -203,8 +208,6 @@ public class HexMetrics : MonoBehaviour
             lakesBlendFactor;
     }
 
-
-
     public static Texture2D noiseSource;
     public const float noiseScale = 0.003f;
     public const float cellPerturbStrength = 4f;
@@ -236,6 +239,7 @@ public class HexMetrics : MonoBehaviour
         float area = Mathf.Sqrt(p * (p - a) * (p - b) * (p - c));//海伦公式求面积
 
         int n = (int)(area * density);
+        n = n < 1 ? 1 : n;
 
         Vector3[] positions = new Vector3[n];
         for (int i = 0; i < n; i++)
@@ -263,5 +267,7 @@ public class HexMetrics : MonoBehaviour
     public const float IronDepositCoefficient = 0.1f;
 
     public const int InitialCellResourceNum = 100;
+
+    public static int HexDirectionNum = 6;
 }
 

@@ -9,6 +9,8 @@ using UnityEngine.EventSystems;
 
 public class HexMapEditor : MonoBehaviour
 {
+    public static HexMapEditor instance;
+
     public HexGrid hexGrid;
 
     private Color activeColor;
@@ -29,10 +31,37 @@ public class HexMapEditor : MonoBehaviour
     bool isShow;
     bool closeFrame;
 
+    bool isTouchDown;
+
+    //public delegate void Action<HexCell>(HexCell arg);
+    //Action<HexCell> action;
+
+    HexCell ChooesCell { get; set; }
+
+    // 点击事件
+    public delegate void ClickAction(HexCell arg);
+    ClickAction clickAction;
+
+    // 移动事件
+    public delegate void MoveAction(HexCell old, HexCell curr);
+    MoveAction moveAction;
+
+    MoveAction touchMoveAction;
+
+    // 点下事件
+    public delegate void TouchAction(HexCell curr);
+
+    TouchAction defaultTouchAction;
+
+    HexCell currCell;
+    HexCell downCell;
+
     void Awake()
     {
         isShow = false;
         closeFrame = false;
+
+        instance = this;
     }
 
     private void Start()
@@ -45,40 +74,187 @@ public class HexMapEditor : MonoBehaviour
         //createButton = child.gameObject;
     }
 
-    void Update()
+    //public void SetTouchAction(Action<HexCell> action)
+    //{
+    //    this.action = action;
+    //}
+
+    public void SetClickAction(ClickAction action)
     {
-        if (closeFrame)
-        {
-            closeFrame = false;
-        }
-        else if (Input.GetMouseButtonUp(0))
-        {
-            HandleInput();
-        }
+        this.clickAction = action;
     }
 
-    void HandleInput()
+    public void SetMoveAction(MoveAction action)
+    {
+        this.moveAction = action;
+    }
+
+    public void SetTouchMoveAction(MoveAction action)
+    {
+        this.touchMoveAction = action;
+    }
+
+    public void SetDefaultTouchAction(TouchAction action)
+    {
+        this.defaultTouchAction = action;
+    }
+
+    bool isDown;
+    bool isEnter = false;
+
+    void Update()
     {
         Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
         RaycastHit hit;
 
-        Debug.Log(string.Format("------------- {0} {1}", Physics.Raycast(inputRay, out hit, 200f, noMask), Physics.Raycast(inputRay, out hit, 200f, targetMask)));
-
-        // 没有碰到不需要的layer 并且碰到地图
-        if ( !Physics.Raycast(inputRay, out hit, 200f, noMask) 
-            && Physics.Raycast(inputRay, out hit, 200f, targetMask))  // && !EventSystem.current.IsPointerOverGameObject()
+        //if (!Physics.Raycast(inputRay, out hit, 200f, noMask))
+        if (!EventSystem.current.IsPointerOverGameObject())
         {
-            Debug.Log(isShow);
-            if (isShow)
+            HexCell cell = GetCellUnderCursor();
+
+            if(cell == null)
             {
-                CloseHexCellMessage();
+                return;
             }
-            else
+
+            Debug.Log(string.Format(" {0} ", cell.index));
+
+            if (currCell == null || currCell.index != cell.index)
             {
-                ShowHexCellMessage(hexGrid.GetCell(hit.point));
+                MouseMove(currCell, cell);
+            }
+
+            currCell = cell;
+
+            if (!isEnter)
+            {
+                isEnter = true;
+                MouseEnter();
+            }
+
+            //if(Input.touchCount > 0)
+            if (Input.GetMouseButtonDown(0))
+            {
+                Debug.Log(string.Format(" GetMouseButtonDown {0} ", isDown));
+                if (!isDown)
+                {
+                    isDown = true;
+                    MouseDown();
+                }
+            }
+
+            if (Input.GetMouseButtonUp(0))
+            {
+                Debug.Log(string.Format(" GetMouseButtonUp {0} ", isDown));
+                isDown = false;
+                MouseUp();
             }
         }
+
     }
+
+    HexCell GetCellUnderCursor()
+    {
+        Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+        
+        if (Physics.Raycast(inputRay, out hit, 200f, targetMask))
+        {
+            return hexGrid.GetCell(hit.point);
+        }
+        return null;
+    }
+
+    void HandleInput()
+    {
+
+        HexCell cell = GetCellUnderCursor();
+        // 没有碰到不需要的layer 并且碰到地图
+        if (cell)  // && !EventSystem.current.IsPointerOverGameObject()
+        {
+            
+        }
+    }
+    
+
+    //当鼠标进入在网格上时，
+    void MouseEnter()
+    {
+        Debug.Log("OnMouseEnter");
+    }
+
+    // ...当鼠标悬浮在物体上
+    void MouseMove(HexCell oldCell, HexCell currCell)
+    {
+        if (moveAction != null)
+        {
+            moveAction.Invoke(oldCell, currCell);
+        }
+
+        if (isTouchDown && touchMoveAction != null)
+        {
+            touchMoveAction.Invoke(oldCell, currCell);
+        }
+    }
+
+    void MouseDrag()
+    {
+
+    }
+
+    // ...当鼠标移开时
+    void MouseExit()
+    {
+        isTouchDown = false;
+    }
+    // ...当鼠标点击
+    void MouseDown()
+    {
+        isTouchDown = true;
+        downCell = currCell;
+
+        // 没有其他点击事件，则调用默认的
+        if(touchMoveAction == null && clickAction == null && defaultTouchAction != null)
+        {
+            defaultTouchAction.Invoke(currCell);
+        }
+    }
+    // ...当鼠标抬起
+    void MouseUp()
+    {
+        if(downCell == null || currCell == null)
+        {
+            return;
+        }
+        Debug.Log(string.Format(" MouseUp {0} {1} ", downCell.index, currCell.index));
+
+        // 点击了物品
+        if (downCell.index == currCell.index)
+        {
+            Click();
+        }
+
+        downCell = null;
+        isTouchDown = false;
+    }
+
+    void Click()
+    {
+        if (clickAction != null)
+        {
+            clickAction.Invoke(GetCellUnderCursor());
+        }
+    }
+
+
+
+
+
+
+
+
+
+
 
     // 展示 格子信息
     void ShowHexCellMessage(HexCell cell)
@@ -88,13 +264,13 @@ public class HexMapEditor : MonoBehaviour
 
         Debug.Log("1111111111111");
 
-        PersonControl person = cell.person;
-        if(person != null)
-        {
-            Debug.Log("22222222222222");
-            person.ShowView();
-            return;
-        }
+        PersonControl person = cell.Person;
+        //if(person != null)
+        //{
+        //    Debug.Log("22222222222222");
+        //    person.ShowView();
+        //    return;
+        //}
 
         // 存在建筑则显示建筑信息
         MapBuild build = cell.Build;
@@ -132,7 +308,7 @@ public class HexMapEditor : MonoBehaviour
     {
         CloseCreateButton();
 
-        PersonControl person = selectCell.person;
+        PersonControl person = selectCell.Person;
         if (person != null)
         {
             Debug.Log("44444444");

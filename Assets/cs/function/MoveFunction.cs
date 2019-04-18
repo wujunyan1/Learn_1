@@ -9,7 +9,6 @@ using UnityEngine.Events;
 /// </summary>
 public class MoveFunction : ObjFunction
 {
-    public Button moveButtonPrefab;
     public HexMapEditor baseTouch;
 
     // 选择走到哪里
@@ -17,65 +16,47 @@ public class MoveFunction : ObjFunction
 
     int targetMask;
 
-    UnityAction action;
-
     public MoveFunction()
     {
         name = "移动";
         //this.action = action;
     }
 
-    public override Button GetFunctionBtn()
+    public override void OnStartBtn()
     {
-        Button btn = Instantiate(moveButtonPrefab);
-        Text text = btn.GetComponentInChildren<Text>();
-        text.text = name;
+        base.OnStartBtn();
 
-        btn.onClick.AddListener(
-            delegate
-            {
-                OnMoveBtn();
-            }
-            );
+        HexMapEditor inputPanel = HexMapEditor.instance;
 
-        return btn;
+        inputPanel.SetMoveAction(ShowMoveHexCell);
+        inputPanel.SetClickAction(ChooseCell);
     }
 
-    public void OnMoveBtn()
+    // 移动到的位置
+    public void ShowMoveHexCell(HexCell old, HexCell curr)
     {
-        isMoveChoose = true;
+        control.ShowMovePath(curr);
     }
 
-    void Update()
+    // 选择了这个
+    public void ChooseCell(HexCell cell)
     {
-        if (isMoveChoose)
-        {
-            if (Input.GetMouseButtonUp(0))
-            {
-                HandleInput();
-            }
-        }
-    }
+        Debug.Log("ChooseCell");
+        control.MoveTo(cell);
 
-    void HandleInput()
-    {
-        Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
-
-        Debug.Log(string.Format("-------------"));
-
-        // 没有碰到不需要的layer 并且碰到地图
-        if (Physics.Raycast(inputRay, out hit, 200f, targetMask))  // && !EventSystem.current.IsPointerOverGameObject()
-        {
-
-            HexCell moveToCell = HexGrid.instance.GetCell(hit.point);
-
-            action.Invoke();
-        }
+        CloseFuncView();
     }
 
     public override bool IsActive()
     {
         return true;
+    }
+
+    public override void CloseFuncView()
+    {
+        base.CloseFuncView();
+        HexMapEditor inputPanel = HexMapEditor.instance;
+        inputPanel.SetMoveAction(null);
+        inputPanel.SetClickAction(null);
     }
 }

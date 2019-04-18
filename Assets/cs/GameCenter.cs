@@ -53,6 +53,7 @@ public class GameCenter : MonoBehaviour
 
         grid.Save(writer);
 
+        writer.Write((byte)camps.Count);
         foreach (Camp camp in camps)
         {
             camp.Save(writer);
@@ -66,8 +67,18 @@ public class GameCenter : MonoBehaviour
 
         grid.Load(reader);
 
+        int count = reader.ReadByte();
+
+        //清除原来的数据
         foreach (Camp camp in camps)
         {
+            camp.ClearData();
+        }
+        camps = new List<Camp>();
+
+        for (int i = 0; i < count; i++)
+        {
+            Camp camp = AddCamp();
             camp.Load(reader);
         }
 
@@ -78,6 +89,13 @@ public class GameCenter : MonoBehaviour
     {
         round = 0;
         grid.CreateMap(data);
+
+        foreach (Camp camp in camps)
+        {
+            camp.ClearData();
+
+        }
+        camps = new List<Camp>();
 
         int campNum = data.campNum;
         for(int i = 0; i < campNum; i++)
@@ -115,10 +133,11 @@ public class GameCenter : MonoBehaviour
         }
     }
 
-    void AddCamp()
+    Camp AddCamp()
     {
         Camp camp = new Camp(camps.Count);
         camps.Add(camp);
+        return camp;
     }
 
     public Camp GetCamp(int id)
@@ -147,7 +166,7 @@ public class GameCenter : MonoBehaviour
         }
 
         Creater creater = camp.GetCreater(0);
-        HexCell cell = grid.GetCell(creater.point);
+        HexCell cell = grid.GetCell(creater.Point);
         return cell.transform;
     }
 

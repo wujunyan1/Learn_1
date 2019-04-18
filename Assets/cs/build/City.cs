@@ -6,7 +6,7 @@ using System.IO;
 // 城市
 public class City : MapBuild
 {
-    string name;
+    new string name;
     public string Name
     {
         get
@@ -97,6 +97,16 @@ public class City : MapBuild
 
         HexCell currCell = HexGrid.instance.GetCell(point);
         currCell.Build = this;
+    }
+
+    /// <summary>
+    /// 清掉数据，因为会创建新的城市，所以只要清掉模型便可
+    /// </summary>
+    public override void ClearData()
+    {
+        base.ClearData();
+
+
     }
 
     // 下一回合

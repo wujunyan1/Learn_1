@@ -32,14 +32,22 @@ public class HexGridChunk : MonoBehaviour
     static Color color2 = new Color(0f, 1f, 0f);
     static Color color3 = new Color(0f, 0f, 1f);
 
+
+    public CollionClick click;
+    int targetMask;
+
     // 初始化地图
     public void Awake()
     {
+        targetMask = LayerMask.GetMask("Map");
+
         gridCanvas = GetComponentInChildren<Canvas>();
         //hexMesh = GetComponentInChildren<HexMesh>();
 
         //Random.InitState(mapSeed);
         //int random = Random.Range(0, 1000);
+
+        //click.
 
         CreateCells();
     }
@@ -1364,5 +1372,42 @@ public class HexGridChunk : MonoBehaviour
 
         Refresh(cell);
         //features.AddBuildFeature(cell);
+    }
+
+
+    HexCell ChooesCell { get; set; }
+
+    HexCell GetCurrMouseCell()
+    {
+        Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+
+        if (Physics.Raycast(inputRay, out hit, 200f, targetMask))
+        {
+            return HexGrid.instance.GetCell(hit.point);
+        }
+
+        return null;
+    }
+
+    public void OnClickCell()
+    {
+        HexCell cell = GetCurrMouseCell();
+        if(cell != null)
+        {
+            HexCell chooseCell = ChooesCell;
+
+            // 移动了
+            if(chooseCell == null || chooseCell.index != cell.index)
+            {
+
+                ChooesCell = cell;
+            }
+        }
+    }
+
+    public void OnCancelCell()
+    {
+
     }
 }

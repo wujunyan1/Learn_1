@@ -21,7 +21,7 @@ public class Point
 
     public Vector3 GetPosition()
     {
-        HexCell cell = HexGrid.instance.GetCell(this);
-        return cell.Position;
+        //HexCell cell = HexGrid.instance.GetCell(this);
+        return Vector3.zero;
     }
 }

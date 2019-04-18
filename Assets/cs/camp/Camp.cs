@@ -12,7 +12,14 @@ public class Camp : RoundObject
     int id;
 
     // 名称
-    string name;
+    string campName;
+    public string CampName
+    {
+        get
+        {
+            return campName;
+        }
+    }
 
     // 颜色
     Color color;
@@ -46,21 +53,58 @@ public class Camp : RoundObject
 
     public void Save(BinaryWriter writer)
     {
+        writer.Write((byte)citys.Count);
         foreach (City city in citys)
         {
             city.Save(writer);
+        }
+
+        writer.Write((byte)creaters.Count);
+        foreach (Creater creater in creaters)
+        {
+            creater.Save(writer);
         }
     }
 
     public void Load(BinaryReader reader)
     {
-        foreach (City city in citys)
+        ObjGenerate objGenerate = ObjGenerate.instance;
+        
+        int count = reader.ReadByte();
+        for (int i = 0; i < count; i++)
         {
+            City city = objGenerate.CreateCity();
+            citys.Add(city);
             city.Load(reader);
+        }
+
+        int createrCount = reader.ReadByte();
+        for (int i = 0; i < count; i++)
+        {
+            Creater creater = new Creater();
+            creaters.Add(creater);
+            creater.Load(reader);
         }
     }
 
-    public Creater CreatCreater(Point point)
+    public void ClearData()
+    {
+        foreach (City city in citys)
+        {
+            city.ClearData();
+            Destroy(city);
+        }
+
+        citys = new List<City>();
+
+        foreach (Creater creater in creaters)
+        {
+            creater.ClearData();
+        }
+        creaters = new List<Creater>();
+    }
+
+    public Creater CreatCreater(HexCoordinates point)
     {
         Creater creater = new Creater(point);
         return creater;
@@ -80,7 +124,7 @@ public class Camp : RoundObject
             HexCell cell = grid.GetCell(x, y);
             if(cell.TerrainType != HexTerrainType.Water && cell.TerrainType != HexTerrainType.Ridge)
             {
-                return CreatCreater(new Point(x, y));
+                return CreatCreater(new HexCoordinates(x, y));
             }
         }
     }

@@ -441,6 +441,7 @@ MonoBehaviour:
   features: {fileID: 8954919263627721838}
   colors:
   - {r: 0.7830189, g: 0.321859, b: 0.13665895, a: 0}
+  click: {fileID: 0}
 --- !u!1 &7112505714057176050
 GameObject:
   m_ObjectHideFlags: 0

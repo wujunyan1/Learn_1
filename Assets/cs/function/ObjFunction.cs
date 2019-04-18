@@ -17,7 +17,7 @@ public class ObjFunction : Object
         }
     }
 
-    public PersonControl control;
+    public Person control;
 
     /// <summary>
     /// 这个功能是否可用
@@ -31,5 +31,14 @@ public class ObjFunction : Object
     public virtual Button GetFunctionBtn()
     {
         return null;
+    }
+
+    public virtual void OnStartBtn()
+    {
+    }
+
+    public virtual void CloseFuncView()
+    {
+
     }
 }

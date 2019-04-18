@@ -1,11 +1,35 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
 
 // 方向
 public enum HexDirection
 {
-    NE, E, SE, SW, W, NW
+    /// <summary>
+    /// 北东
+    /// </summary>
+    NE,
+    /// <summary>
+    /// 东
+    /// </summary>
+    E,
+    /// <summary>
+    /// 南东
+    /// </summary>
+    SE,
+    /// <summary>
+    /// 南西
+    /// </summary>
+    SW,
+    /// <summary>
+    /// 西
+    /// </summary>
+    W,
+    /// <summary>
+    /// 北西
+    /// </summary>
+    NW
 }
 
 public static class HexDirectionExtensions
@@ -25,8 +49,7 @@ public static class HexDirectionExtensions
     public static HexDirection Next(this HexDirection direction)
     {
         return direction == HexDirection.NW ? HexDirection.NE : (direction + 1);
-    }
-
+    }    
 }
 
 [System.Serializable]
@@ -55,6 +78,20 @@ public struct HexCoordinates
     {
         this.x = x;
         this.z = z;
+    }
+
+    public void Save(BinaryWriter writer)
+    {
+        writer.Write(x);
+        writer.Write(z);
+    }
+
+    public static HexCoordinates Load(BinaryReader reader)
+    {
+        HexCoordinates c;
+        c.x = reader.ReadInt32();
+        c.z = reader.ReadInt32();
+        return c;
     }
 
     public static HexCoordinates FromOffsetCoordinates(int x, int z)
@@ -114,6 +151,13 @@ public struct HexCoordinates
         }
     }
 
+    public int DistanceTo(HexCoordinates other)
+    {
+        return ((x < other.x ? other.x - x : x - other.x) +
+            (Y < other.Y ? other.Y - Y : Y - other.Y) +
+            (z < other.z ? other.z - z : z - other.z)) / 2;
+    }
+
     public override string ToString()
     {
         return "(" +
@@ -123,5 +167,27 @@ public struct HexCoordinates
     public string ToStringOnSeparateLines()
     {
         return X.ToString() + "\n" + Y.ToString() + "\n" + Z.ToString();
+    }
+
+    public Vector3 GetPosition()
+    {
+        HexCell cell = HexGrid.instance.GetCell(this);
+        return cell.Position;
+    }
+
+    public override bool Equals(object obj)
+    {
+        HexCoordinates o = (HexCoordinates)obj;
+        if(o.X == this.X && o.Z == this.Z)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return base.GetHashCode();
     }
 }

@@ -13,10 +13,7 @@ public class CreaterControl : PersonControl
     {
         base.ShowView();
 
-        Debug.Log("ShowView");
-
         Creater creater = GetPerson<Creater>();
-
 
         controlView.control = this;
         controlView.Open();

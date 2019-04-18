@@ -116,7 +116,7 @@ public class HexCell : MonoBehaviour
     public City city;
 
     // 人物
-    public PersonControl person;
+    public PersonControl Person { get; set; }
 
     public HexGridChunk chunk;
 
@@ -177,7 +177,7 @@ public class HexCell : MonoBehaviour
                 return;
             }
             lakesLevel = value;
-            //Refresh();
+            Refresh();
         }
     }
 
@@ -201,7 +201,9 @@ public class HexCell : MonoBehaviour
     // 河流
     RiverDirection[] rivers;
 
-
+    /// <summary>
+    /// 距离
+    /// </summary>
     int distance;
     public int Distance
     {
@@ -212,14 +214,39 @@ public class HexCell : MonoBehaviour
         set
         {
             distance = value;
-            UpdateDistanceLabel();
         }
     }
 
+    /// <summary>
+    /// 显示路径
+    /// </summary>
+    public HexCell PathFrom { get; set; }
+
+    public int SearchHeuristic { get; set; }
+
+    public int SearchPhase { get; set; }
+
+    // 预估距离
+    public int SearchPriority
+    {
+        get
+        {
+            return distance + SearchHeuristic;
+        }
+    }
+
+    public HexCell NextWithSamePriority { get; set; }
 
     public void Awake()
     {
         rivers = new RiverDirection[HexMetrics.HexTrianglesNum];
+
+        //DisableHighlight();
+    }
+
+    public void Start()
+    {
+        DisableHighlight();
     }
 
     public void Save(BinaryWriter writer)
@@ -281,6 +308,60 @@ public class HexCell : MonoBehaviour
         cell.neighbors[(int)direction.Opposite()] = this;
     }
 
+    public HexDirection Direction( HexCell neighbor)
+    {
+        int center = this.index;
+        int nei = neighbor.index;
+
+        int s = nei - center;
+        int cellCountX = HexGrid.instance.cellCountX;
+
+        if (s == 1)
+        {
+            return HexDirection.E;
+        }
+
+        if (s == -1)
+        {
+            return HexDirection.W;
+        }
+
+        int diff = 1;
+
+        if((coordinates.Z & 1) == 0)
+        {
+            diff = 0;
+        }
+
+        s -= diff;
+
+        if (s == cellCountX )
+        {
+            return HexDirection.NE;
+        }
+
+        if (s == cellCountX - 1)
+        {
+            return HexDirection.NW;
+        }
+
+        if (s == -cellCountX - 1)
+        {
+            return HexDirection.SW;
+        }
+
+        if (s == -cellCountX)
+        {
+            return HexDirection.SE;
+        }
+
+
+        return HexDirection.E;
+    }
+
+
+
+
     // 获取自己和邻居的连接地形
     public HexEdgeType GetEdgeType(HexDirection direction)
     {
@@ -312,16 +393,27 @@ public class HexCell : MonoBehaviour
     // 待修改， 只需要更新周围的 6格就好了
     void Refresh()
     {
-        //if(chunk)
+        if (chunk)
         {
             chunk.Refresh();
+
+            if (Person)
+            {
+                Person.ValidateLocation();
+            }
+
         }
+
     }
 
     // 
     void RefreshOnlySelf()
     {
         chunk.Refresh( this );
+        if (Person)
+        {
+            Person.ValidateLocation();
+        }
     }
 
 
@@ -573,13 +665,51 @@ public class HexCell : MonoBehaviour
     }
 
     /// <summary>
-    /// 更像距离的显示
+    /// 是否高亮
     /// </summary>
-    void UpdateDistanceLabel()
+    public void DisableHighlight()
     {
-        Text label = uiRect.GetComponent<Text>();
-        label.text = distance.ToString();
+        Image highlight = uiRect.GetChild(0).GetComponent<Image>();
+        highlight.enabled = false;
     }
 
+    /// <summary>
+    /// 是否高亮
+    /// </summary>
+    public void EnableHighlight(Color color)
+    {
+        Image highlight = uiRect.GetChild(0).GetComponent<Image>();
+        highlight.color = color;
+        highlight.enabled = true;
+    }
 
+    public void SetLabel(string text)
+    {
+        UnityEngine.UI.Text label = uiRect.GetComponent<Text>();
+        label.text = text;
+    }
+    
+
+    public int GetDistanceCost(HexCell neighbor)
+    {
+        HexEdgeType edgeType = GetEdgeType(neighbor);
+        if (edgeType == HexEdgeType.Cliff)
+        {
+            return int.MaxValue;
+        }
+
+        int moveCost = 0;
+        {
+            moveCost += edgeType == HexEdgeType.Flat ? 5 : 10;
+
+            // 不同类型地块额外增加消耗
+            moveCost += neighbor.TerrainType.Distance();
+
+            // 有河流在额外加3
+            moveCost += neighbor.HasRiver() ? 3 : 0;
+
+        }
+
+        return moveCost;
+    }
 }

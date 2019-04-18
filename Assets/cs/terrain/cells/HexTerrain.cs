@@ -42,6 +42,27 @@ public enum HexTerrainType
     Gold,               // 金矿
 }
 
+public static class HexTerrainTypeExtensions
+{
+    public static int[] distance =
+    {
+        int.MaxValue,
+        0,
+        3,
+        int.MaxValue,
+        2,
+        1,
+        4,
+        4,
+        4,
+    };
+
+    public static int Distance(this HexTerrainType type)
+    {
+        return distance[(int)type];
+    }
+}
+
 // 根据数据返回格子的类型
 public class HexTerrain
 {

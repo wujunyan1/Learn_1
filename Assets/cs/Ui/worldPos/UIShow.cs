@@ -38,10 +38,16 @@ public class UIShow : MonoBehaviour
     private float baseFomat;     //默认字与摄像机的距离
     private float currentFomat;  //当前相机的距离
 
+    private bool isSet = false;
+
     private void Start()
     {
         //计算以下默认的距离
         baseFomat = Vector3.Distance(Vector3.zero, Camera.main.transform.position);
+        if (baseFomat == 0)
+        {
+            baseFomat = 0.01f;
+        }
 
         if (!showUI)
         {
@@ -55,12 +61,13 @@ public class UIShow : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (baseFomat != currentFomat)
+        if (baseFomat != currentFomat || !isSet)
         {
             if (!obj)
             {
                 Debug.Log(name);
             }
+            isSet = true;
             Vector3 newPos = obj.transform.position + offset;
             //保存当前相机到文字UI的距离
             currentFomat = Vector3.Distance(newPos, Camera.main.transform.position);

@@ -8,7 +8,7 @@ public enum BuildType
     City,
 }
 
-public class MapBuild
+public class MapBuild : MonoBehaviour
 {
     protected BuildType buildType;
 
@@ -21,13 +21,13 @@ public class MapBuild
     }
 
     // 坐标
-    protected Point point;
+    protected HexCoordinates point;
 
     public void Save(BinaryWriter writer)
     {
         writer.Write((byte)buildType);
-        writer.Write(point.x);
-        writer.Write(point.z);
+        writer.Write(point.X);
+        writer.Write(point.Z);
         SaveData(writer);
     }
 
@@ -35,9 +35,14 @@ public class MapBuild
     {
         int x = reader.ReadInt32();
         int z = reader.ReadInt32();
-        point = new Point(x, z);
+        point = new HexCoordinates(x, z);
 
         LoadData(reader);
+    }
+
+    public virtual void ClearData()
+    {
+
     }
 
     public virtual void SaveData(BinaryWriter writer)
@@ -52,10 +57,10 @@ public class MapBuild
 
     public void SetPoint(int x, int z)
     {
-        point = new Point(x, z);
+        point = new HexCoordinates(x, z);
     }
 
-    public Point GetPoint()
+    public HexCoordinates GetPoint()
     {
         return point;
     }

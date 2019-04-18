@@ -56,6 +56,7 @@ public class HexGrid : MonoBehaviour
     int rainTerrain2;
 
     float[][] hei;
+    Dictionary<int, int> pathData;
 
     public void Save(BinaryWriter writer)
     {
@@ -95,11 +96,14 @@ public class HexGrid : MonoBehaviour
         instance = this;
         HexMetrics.noiseSource = noiseSource;
 
+        pathData = new Dictionary<int, int>();
         //CreateMap(cellCountX, cellCountZ);
     }
 
     public bool CreateMap(NewGameData data)
     {
+        ClearPath();
+
         int x = data.X;
         int z = data.Z;
         int mapSeed = data.mapSeed;
@@ -197,7 +201,7 @@ public class HexGrid : MonoBehaviour
         //cell.transform.SetParent(transform, false);
         cell.transform.localPosition = position;
         cell.index = index;
-        cell.coordinates = HexCoordinates.FromOffsetCoordinates(x, z);
+        cell.coordinates = new HexCoordinates(x , z); // HexCoordinates.FromOffsetCoordinates(x, z);
         //cell.terrainType = HexTerrainType.Ridge;
         //Debug.Log(cell.terrainType);
 
@@ -289,9 +293,9 @@ public class HexGrid : MonoBehaviour
         return cells[xOffset + zOffset * cellCountX];
     }
 
-    public HexCell GetCell(Point point)
+    public HexCell GetCell(HexCoordinates point)
     {
-        return GetCell(point.x, point.z);
+        return GetCell(point.X, point.Z);
     }
 
     // 获取坐标的格子
@@ -874,13 +878,230 @@ public class HexGrid : MonoBehaviour
         }
     }
 
+    // 搜索队列
+    HexCellPriorityQueue searchFrontier;
 
+    // 判断是否超出边界
+    int searchFrontierPhase;
 
-    public void FindDistancesTo(HexCell cell)
+    HexCell currentPathFrom, currentPathTo;
+    bool currentPathExists;
+
+    public List<HexCell> FindPath(HexCell fromCell, HexCell toCell, int speed)
     {
-        for (int i = 0; i < cells.Length; i++)
+        //StopAllCoroutines();
+        //StartCoroutine(Search(fromCell, toCell, speed));
+        // 计时器
+        System.Diagnostics.Stopwatch sw = new System.Diagnostics.Stopwatch();
+        sw.Start();
+
+        ClearPath();
+        currentPathFrom = fromCell;
+        currentPathTo = toCell;
+        currentPathExists = Search(fromCell, toCell, speed);
+        List<HexCell> path = GetPath();
+        ShowPath(fromCell, path, speed);
+
+        sw.Stop();
+        Debug.Log(sw.ElapsedMilliseconds);
+
+        return path;
+    }
+
+    public bool Search(HexCell fromCell, HexCell toCell, int speed)
+    {
+        searchFrontierPhase += 2;
+
+        if (searchFrontier == null)
         {
-            cells[i].Distance = 0;
+            searchFrontier = new HexCellPriorityQueue();
+        }
+        else
+        {
+            searchFrontier.Clear();
+        }
+
+        //for (int i = 0; i < cells.Length; i++)
+        //{
+        //    //cells[i].Distance = int.MaxValue;
+        //    cells[i].SetLabel(null);
+        //    cells[i].DisableHighlight();
+        //}
+
+        //fromCell.EnableHighlight(Color.blue);
+        //toCell.EnableHighlight(Color.red);
+
+        // 所有搜寻过的位置
+        //List<HexCell> frontier = new List<HexCell>();
+        fromCell.SearchPhase = searchFrontierPhase;
+        fromCell.Distance = 0;
+        //frontier.Add(fromCell);
+        searchFrontier.Enqueue(fromCell);
+
+        while (searchFrontier.Count > 0)
+        {
+            HexCell current = searchFrontier.Dequeue();
+            current.SearchPhase += 1;
+            //frontier.RemoveAt(0);
+
+            if (current == toCell)
+            {
+                return true;
+            }
+
+            int currentTurn = current.Distance / speed;
+
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                HexCell neighbor = current.GetNeighbor(d);
+                if (neighbor == null || neighbor.SearchPhase > searchFrontierPhase)
+                {
+                    continue;
+                }
+                if (neighbor.TerrainType.Distance() == int.MaxValue)
+                {
+                    continue;
+                }
+                HexEdgeType edgeType = current.GetEdgeType(neighbor);
+                if (edgeType == HexEdgeType.Cliff)
+                {
+                    continue;
+                }
+
+                //int distance = current.Distance;
+
+                int moveCost = current.GetDistanceCost(neighbor);
+
+                int distance = current.Distance + moveCost;
+                int turn = distance / speed;
+
+                // 额外增加了一个回合
+                if (turn > currentTurn)
+                {
+                    // 距离就是 前一个回合数走的距离 + 这个格子的距离
+                    distance = turn * speed + moveCost;
+                }
+
+                // 没有设置过距离的
+                if (neighbor.SearchPhase < searchFrontierPhase)
+                {
+                    neighbor.SearchPhase = searchFrontierPhase;
+                    neighbor.Distance = distance;
+                    neighbor.PathFrom = current;
+                    neighbor.SearchHeuristic =
+                        neighbor.coordinates.DistanceTo(toCell.coordinates) * 5;
+
+                    //neighbor.SetLabel(turn.ToString());
+                    searchFrontier.Enqueue(neighbor);
+                    //frontier.Add(neighbor);
+                }
+                // 有更近的距离的
+                else if (distance < neighbor.Distance)
+                {
+                    int oldPriority = neighbor.SearchPriority;
+                    neighbor.Distance = distance;
+                    neighbor.PathFrom = current;
+                    //neighbor.SetLabel(turn.ToString());
+                    searchFrontier.Change(neighbor, oldPriority);
+                }
+
+                //frontier.Sort(
+                //    (x, y) => x.SearchPriority.CompareTo(y.SearchPriority)
+                //);
+            }
+
+        }
+        return false;
+    }
+
+    List<HexCell> GetPath()
+    {
+        List<HexCell> path = new List<HexCell>();
+
+        if (currentPathExists)
+        {
+            HexCell current = currentPathTo;
+            while (current != currentPathFrom)
+            {
+                path.Add(current);
+
+                //int turn = current.Distance / speed;
+                //current.SetLabel(turn.ToString());
+                //string s = string.Format("{0} {1} {2}", current.index, current.coordinates.X, current.coordinates.Z);
+                //current.SetLabel(s);
+                //current.EnableHighlight(Color.white);
+                current = current.PathFrom;
+            }
+        }
+        //currentPathFrom.EnableHighlight(Color.blue);
+        //currentPathTo.EnableHighlight(Color.red);
+
+        return path;
+    }
+
+    public void ShowPath(HexCell start, List<HexCell> path, int speed)
+    {
+        //List<HexCell> path = new List<HexCell>();
+        int cost = 0;
+
+        HexCell currCell = start;
+
+        for ( int i = path.Count - 1; i >= 0; i--)
+        {
+            HexCell nextCell = path[i];
+
+            cost += currCell.GetDistanceCost(nextCell);
+
+            int turn = cost / speed;
+            nextCell.SetLabel(turn.ToString());
+            //string s = string.Format("{0} {1} {2}", nextCell.index, nextCell.coordinates.X, nextCell.coordinates.Z);
+            //nextCell.SetLabel(s);
+            nextCell.EnableHighlight(Color.white);
+
+            currCell = nextCell;
+        }
+
+        start.EnableHighlight(Color.blue);
+        if (path.Count > 0)
+        {
+            path[0].EnableHighlight(Color.red);
+        }
+    }
+
+
+    void ClearPath()
+    {
+        if (currentPathExists)
+        {
+            HexCell current = currentPathTo;
+            while (current != currentPathFrom)
+            {
+                current.SetLabel(null);
+                current.DisableHighlight();
+                current = current.PathFrom;
+            }
+            current.DisableHighlight();
+            currentPathExists = false;
+        }
+        else if (currentPathFrom)
+        {
+            currentPathFrom.DisableHighlight();
+            currentPathTo.DisableHighlight();
+        }
+
+        currentPathFrom = currentPathTo = null;
+    }
+
+    public void ClearShowPath(HexCell path)
+    {
+        path.DisableHighlight();
+    }
+
+    public void ClearShowPath(List<HexCell> path)
+    {
+        foreach(HexCell cell in path)
+        {
+            ClearShowPath(cell);
         }
     }
 }

@@ -45,11 +45,17 @@ public class PersonControlView : View
             btn.onClick.AddListener(
                 delegate
                 {
+                    TouchFunc(func);
                 }
                 );
 
             btn.transform.SetParent(transform, false);
         }
 
+    }
+
+    public void TouchFunc(ObjFunction func)
+    {
+        func.OnStartBtn();
     }
 }
