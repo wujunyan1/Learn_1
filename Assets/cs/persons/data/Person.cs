@@ -10,7 +10,8 @@ public class Person : RoundObject
 {
     // 坐标
     HexCoordinates point;
-    public HexCoordinates Point {
+    public HexCoordinates Point
+    {
         get
         {
             return point;
@@ -19,19 +20,6 @@ public class Person : RoundObject
         {
             point = value;
             start = HexGrid.instance.GetCell(point);
-
-            if (Control)
-            {
-                Control.Location = start;
-            }
-
-            if (end != null)
-            {
-                if (point.Equals(end.coordinates))
-                {
-                    MoveNextCell();
-                }
-            }
         }
     }
 
@@ -73,6 +61,8 @@ public class Person : RoundObject
             }
         }
     }
+
+    public int visionRange = 3;
 
     // 模型
     public PersonControl Control;
@@ -241,7 +231,7 @@ public class Person : RoundObject
     }
 
 
-    public void Die()
+    public virtual void Die()
     {
         ClearData();
     }

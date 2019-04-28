@@ -27,6 +27,8 @@ public class HexGrid : MonoBehaviour
 
     public Texture2D noiseSource;
 
+    HexCellShaderData cellShaderData;
+
     // 画布
     //Canvas gridCanvas;
 
@@ -56,7 +58,6 @@ public class HexGrid : MonoBehaviour
     int rainTerrain2;
 
     float[][] hei;
-    Dictionary<int, int> pathData;
 
     public void Save(BinaryWriter writer)
     {
@@ -95,8 +96,9 @@ public class HexGrid : MonoBehaviour
     {
         instance = this;
         HexMetrics.noiseSource = noiseSource;
+        cellShaderData = gameObject.AddComponent<HexCellShaderData>();
+        cellShaderData.Initialize(cellCountX, cellCountZ);
 
-        pathData = new Dictionary<int, int>();
         //CreateMap(cellCountX, cellCountZ);
     }
 
@@ -198,10 +200,13 @@ public class HexGrid : MonoBehaviour
         position.y = 0f; //0f;
 
         HexCell cell = cells[index] = Instantiate<HexCell>(cellPrefab, transform, false);
+
         //cell.transform.SetParent(transform, false);
         cell.transform.localPosition = position;
         cell.index = index;
         cell.coordinates = new HexCoordinates(x , z); // HexCoordinates.FromOffsetCoordinates(x, z);
+        cell.ShaderData = cellShaderData;
+
         //cell.terrainType = HexTerrainType.Ridge;
         //Debug.Log(cell.terrainType);
 
@@ -285,6 +290,10 @@ public class HexGrid : MonoBehaviour
         position = transform.InverseTransformPoint(position);
         HexCoordinates coordinates = HexCoordinates.FromPosition(position);
         int index = coordinates.X + coordinates.Z * cellCountX + coordinates.Z / 2;
+        if(index >= cellCountX * cellCountZ || index < 0)
+        {
+            return null;
+        }
         return cells[index];
     }
 
@@ -1103,5 +1112,80 @@ public class HexGrid : MonoBehaviour
         {
             ClearShowPath(cell);
         }
+    }
+
+    List<HexCell> GetVisibleCells(HexCell fromCell, int range)
+    {
+        List<HexCell> visibleCells = ListPool<HexCell>.Get();
+
+        searchFrontierPhase += 2;
+        if (searchFrontier == null)
+        {
+            searchFrontier = new HexCellPriorityQueue();
+        }
+        else
+        {
+            searchFrontier.Clear();
+        }
+
+        fromCell.SearchPhase = searchFrontierPhase;
+        fromCell.Distance = 0;
+        searchFrontier.Enqueue(fromCell);
+        while (searchFrontier.Count > 0)
+        {
+            HexCell current = searchFrontier.Dequeue();
+            current.SearchPhase += 1;
+            visibleCells.Add(current);
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                HexCell neighbor = current.GetNeighbor(d);
+                if (
+                    neighbor == null ||
+                    neighbor.SearchPhase > searchFrontierPhase
+                )
+                {
+                    continue;
+                }
+                int distance = current.Distance + 1;
+                if (distance > range)
+                {
+                    continue;
+                }
+                if (neighbor.SearchPhase < searchFrontierPhase)
+                {
+                    neighbor.SearchPhase = searchFrontierPhase;
+                    neighbor.Distance = distance;
+                    neighbor.SearchHeuristic = 0;
+                    searchFrontier.Enqueue(neighbor);
+                }
+                else if (distance < neighbor.Distance)
+                {
+                    int oldPriority = neighbor.SearchPriority;
+                    neighbor.Distance = distance;
+                    searchFrontier.Change(neighbor, oldPriority);
+                }
+            }
+        }
+        return visibleCells;
+    }
+
+    public void IncreaseVisibility(HexCell fromCell, int range)
+    {
+        List<HexCell> cells = GetVisibleCells(fromCell, range);
+        for (int i = 0; i < cells.Count; i++)
+        {
+            cells[i].IncreaseVisibility();
+        }
+        ListPool<HexCell>.Add(cells);
+    }
+
+    public void DecreaseVisibility(HexCell fromCell, int range)
+    {
+        List<HexCell> cells = GetVisibleCells(fromCell, range);
+        for (int i = 0; i < cells.Count; i++)
+        {
+            cells[i].DecreaseVisibility();
+        }
+        ListPool<HexCell>.Add(cells);
     }
 }

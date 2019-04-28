@@ -237,6 +237,17 @@ public class HexCell : MonoBehaviour
 
     public HexCell NextWithSamePriority { get; set; }
 
+    public HexCellShaderData ShaderData { get; set; }
+
+    public bool IsVisible
+    {
+        get
+        {
+            return visibility > 0;
+        }
+    }
+    int visibility;
+
     public void Awake()
     {
         rivers = new RiverDirection[HexMetrics.HexTrianglesNum];
@@ -711,5 +722,25 @@ public class HexCell : MonoBehaviour
         }
 
         return moveCost;
+    }
+
+    public void IncreaseVisibility()
+    {
+        visibility += 1;
+        if (visibility == 1)
+        {
+            ShaderData.RefreshVisibility(this);
+        }
+
+    }
+
+    public void DecreaseVisibility()
+    {
+        visibility -= 1;
+        if (visibility == 0)
+        {
+            ShaderData.RefreshVisibility(this);
+        }
+
     }
 }

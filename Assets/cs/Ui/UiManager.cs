@@ -4,10 +4,22 @@ using UnityEngine;
 
 public class UiManager : MonoBehaviour
 {
+    public static UiManager instance;
+
     public GameObject baseMenu;
     public NewMapMenu newMapMenu;
 
+    public Transform buildPanel;
+
+    public GameObject InputPanelPrefable;
+    GameObject currInputPanel;
+
     bool menuOpen = false;
+
+    private void Awake()
+    {
+        instance = this;
+    }
 
     public void Update()
     {
@@ -40,6 +52,24 @@ public class UiManager : MonoBehaviour
         if (newMapMenu.gameObject.activeSelf)
         {
             newMapMenu.gameObject.SetActive(false);
+        }
+    }
+
+    public GameObject OpenInputPanel()
+    {
+        CloseInputPanel();
+        currInputPanel = Instantiate(InputPanelPrefable);
+        currInputPanel.transform.SetParent(buildPanel, false);
+
+        return currInputPanel;
+    }
+
+    public void CloseInputPanel()
+    {
+        if (currInputPanel)
+        {
+            Destroy(currInputPanel);
+            currInputPanel = null;
         }
     }
 }

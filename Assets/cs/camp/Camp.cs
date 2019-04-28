@@ -76,14 +76,16 @@ public class Camp : RoundObject
             City city = objGenerate.CreateCity();
             citys.Add(city);
             city.Load(reader);
+            city.camp = this;
         }
 
         int createrCount = reader.ReadByte();
         for (int i = 0; i < count; i++)
         {
             Creater creater = new Creater();
-            creaters.Add(creater);
+            //creaters.Add(creater);
             creater.Load(reader);
+            AddCreater(creater);
         }
     }
 
@@ -148,5 +150,23 @@ public class Camp : RoundObject
     public Creater GetCreater(int index)
     {
         return creaters[index];
+    }
+
+    public City CreateNewCity(HexCoordinates coordinates, string name)
+    {
+        ObjGenerate objGenerate = ObjGenerate.instance;
+
+        City city = objGenerate.CreateCity();
+        citys.Add(city);
+        city.SetPoint(coordinates);
+        city.Name = name;
+        city.camp = this;
+
+        return city;
+    }
+
+    public void RemoveCreater(Creater creater)
+    {
+        creaters.Remove(creater);
     }
 }

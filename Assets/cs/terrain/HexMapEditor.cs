@@ -117,8 +117,6 @@ public class HexMapEditor : MonoBehaviour
                 return;
             }
 
-            Debug.Log(string.Format(" {0} ", cell.index));
-
             if (currCell == null || currCell.index != cell.index)
             {
                 MouseMove(currCell, cell);
@@ -135,7 +133,6 @@ public class HexMapEditor : MonoBehaviour
             //if(Input.touchCount > 0)
             if (Input.GetMouseButtonDown(0))
             {
-                Debug.Log(string.Format(" GetMouseButtonDown {0} ", isDown));
                 if (!isDown)
                 {
                     isDown = true;
@@ -145,7 +142,6 @@ public class HexMapEditor : MonoBehaviour
 
             if (Input.GetMouseButtonUp(0))
             {
-                Debug.Log(string.Format(" GetMouseButtonUp {0} ", isDown));
                 isDown = false;
                 MouseUp();
             }

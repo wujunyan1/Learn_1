@@ -23,6 +23,8 @@ public class MapBuild : MonoBehaviour
     // 坐标
     protected HexCoordinates point;
 
+    public Camp camp;
+
     public void Save(BinaryWriter writer)
     {
         writer.Write((byte)buildType);
@@ -35,7 +37,7 @@ public class MapBuild : MonoBehaviour
     {
         int x = reader.ReadInt32();
         int z = reader.ReadInt32();
-        point = new HexCoordinates(x, z);
+        SetPoint(x, z);
 
         LoadData(reader);
     }
@@ -58,6 +60,12 @@ public class MapBuild : MonoBehaviour
     public void SetPoint(int x, int z)
     {
         point = new HexCoordinates(x, z);
+        transform.localPosition = point.GetPosition();
+    }
+
+    public void SetPoint(HexCoordinates coordinates)
+    {
+        SetPoint(coordinates.X, coordinates.Z);
     }
 
     public HexCoordinates GetPoint()

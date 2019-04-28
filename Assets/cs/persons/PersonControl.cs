@@ -31,12 +31,19 @@ public class PersonControl : MonoBehaviour
         }
         set
         {
+            if (location)
+            {
+                HexGrid.instance.DecreaseVisibility(location, person.visionRange);
+                location.Person = null;
+            }
             location = value;
 
             string s = string.Format("{0} {1} {2}", location.index, location.coordinates.X, location.coordinates.Z);
             curr = transform.localPosition = value.Position;
             //person.Point = value.coordinates;
             value.Person = this;
+
+            HexGrid.instance.IncreaseVisibility(location, person.visionRange);
             start = value;
         }
     }
@@ -96,9 +103,12 @@ public class PersonControl : MonoBehaviour
     Vector3[] path;
     int pathIndex = 0;
 
+    bool showView;
+
     private void Awake()
     {
         path = null;
+        showView = false;
         pathIndex = 0;
     }
 
@@ -128,6 +138,7 @@ public class PersonControl : MonoBehaviour
 
     public virtual void ShowView()
     {
+        showView = true;
         controlView.control = this;
         controlView.Open();
     }
@@ -135,6 +146,7 @@ public class PersonControl : MonoBehaviour
     public virtual void CloseView()
     {
         controlView.Close();
+        showView = false;
     }
 
     public void UpdateName()
@@ -224,7 +236,17 @@ public class PersonControl : MonoBehaviour
 
     public void Clear()
     {
-        location.Person = null;
+        if (location)
+        {
+            location.Person = null;
+            HexGrid.instance.DecreaseVisibility(location, person.visionRange);
+        }
+
+        if (showView)
+        {
+            CloseView();
+        }
+
         Destroy(gameObject);
     }
 }

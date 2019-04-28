@@ -30,6 +30,7 @@ public class Creater : Person
         res = HeroConfigPool.GetHeroRes(0);
 
         AddFunction(new MoveFunction());
+        AddFunction(new BuildCityFunction());
     }
 
     public override void Save(BinaryWriter writer)
@@ -45,5 +46,12 @@ public class Creater : Person
     public override void ClearData()
     {
         base.ClearData();
+    }
+
+    public override void Die()
+    {
+        base.Die();
+
+        camp.RemoveCreater(this);
     }
 }

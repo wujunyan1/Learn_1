@@ -55,7 +55,8 @@ public class MapBuildFactory : MonoBehaviour
 
     static City CreateCity(HexCell cell)
     {
-        City city = new City(cell, "1111");
+        City city = new City();
+        city.BuildNewCity(cell.coordinates);
         return city;
     }
 }

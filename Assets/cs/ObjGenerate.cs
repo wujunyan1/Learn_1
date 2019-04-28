@@ -16,6 +16,11 @@ public class ObjGenerate : MonoBehaviour
 
     public static ObjGenerate instance;
 
+    private void Awake()
+    {
+        instance = this;
+    }
+
     public void GenerateCreater(Creater creater)
     {
         CreaterControl item = Instantiate(createrPrefab);
@@ -46,6 +51,18 @@ public class ObjGenerate : MonoBehaviour
 
         HexGrid grid = HexGrid.instance;
         item.transform.SetParent(grid.objPlane, false);
+        return item;
+    }
+
+    public City CreateCity(HexCoordinates coordinates)
+    {
+        City item = Instantiate(cityPrefab);
+
+        HexGrid grid = HexGrid.instance;
+        item.transform.SetParent(grid.objPlane, false);
+
+        item.BuildNewCity(coordinates);
+
         return item;
     }
 }

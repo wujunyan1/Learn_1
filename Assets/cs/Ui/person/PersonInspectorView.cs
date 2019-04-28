@@ -162,4 +162,14 @@ public class PersonInspectorView : View
     {
         Close();
     }
+
+    public void HideView()
+    {
+        this.gameObject.SetActive(false);
+    }
+
+    public void ShowView()
+    {
+        this.gameObject.SetActive(false);
+    }
 }

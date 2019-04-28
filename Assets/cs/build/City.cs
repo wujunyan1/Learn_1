@@ -13,6 +13,10 @@ public class City : MapBuild
         {
             return name;
         }
+        set
+        {
+            name = value;
+        }
     }
 
     // 人口
@@ -36,17 +40,14 @@ public class City : MapBuild
         cells = new List<HexCell>();
     }
 
-    public City(HexCell cell, string name)
+    public void BuildNewCity(HexCoordinates coordinates)
     {
-        this.name = name;
-        buildType = BuildType.City;
-        builds = new List<CityBuild>();
-        cells = new List<HexCell>();
-
-        AddHexCell(cell);
+        SetPoint(coordinates);
+        HexCell center = HexGrid.instance.GetCell(coordinates);
+        AddHexCell(center);
         for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
-            HexCell neighbor = cell.GetNeighbor(dir);
+            HexCell neighbor = center.GetNeighbor(dir);
             if (neighbor)
             {
                 AddHexCell(neighbor);
