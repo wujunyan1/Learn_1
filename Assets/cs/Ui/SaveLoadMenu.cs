@@ -162,6 +162,7 @@ public class SaveLoadMenu : MonoBehaviour
             item.MapName = Path.GetFileNameWithoutExtension(paths[i]);
             item.transform.SetParent(listContent, false);
         }
+
     }
 
     public void Delete()

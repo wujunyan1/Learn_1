@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class CameraMove : MonoBehaviour
 {
-    int speed = 50;
+    public int speed = 50;
     float scale_speed = 120f;
 
     float rotate = 1.41421f;
@@ -42,7 +42,7 @@ public class CameraMove : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
         if (Input.GetKey(KeyCode.W))
         {
@@ -85,8 +85,7 @@ public class CameraMove : MonoBehaviour
         {
             transform.Rotate(new Vector3(0, rotateSpeed, 0), Space.World);
         }
-
-
+        
 
         System.TimeSpan ts = System.DateTime.UtcNow - new System.DateTime(1970, 1, 1, 0, 0, 0);
         long ret = System.Convert.ToInt64(ts.TotalSeconds);
