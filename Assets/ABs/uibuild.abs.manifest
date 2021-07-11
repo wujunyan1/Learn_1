@@ -1,0 +1,20 @@
+ManifestFileVersion: 0
+CRC: 1677281672
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: f6da298714fbc4b106921f8bf417bd38
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: cb3f6df5cbc4a2990c44c2787bc9553a
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 213
+  Script: {instanceID: 0}
+Assets:
+- Assets/Resources/sprite/build/dwelling.png
+- Assets/Resources/sprite/build/mainHouse.png
+- Assets/Resources/sprite/build/barrack.png
+Dependencies: []

@@ -3,55 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 
-// 方向
-public enum HexDirection
-{
-    /// <summary>
-    /// 北东
-    /// </summary>
-    NE,
-    /// <summary>
-    /// 东
-    /// </summary>
-    E,
-    /// <summary>
-    /// 南东
-    /// </summary>
-    SE,
-    /// <summary>
-    /// 南西
-    /// </summary>
-    SW,
-    /// <summary>
-    /// 西
-    /// </summary>
-    W,
-    /// <summary>
-    /// 北西
-    /// </summary>
-    NW
-}
-
-public static class HexDirectionExtensions
-{
-    public static HexDirection Opposite(this HexDirection direction)
-    {
-        return (int)direction < 3 ? (direction + 3) : (direction - 3);
-    }
-
-    //  顺时针  上一个
-    public static HexDirection Previous(this HexDirection direction)
-    {
-        return direction == HexDirection.NE ? HexDirection.NW : (direction - 1);
-    }
-
-    //  顺时针  下一个
-    public static HexDirection Next(this HexDirection direction)
-    {
-        return direction == HexDirection.NW ? HexDirection.NE : (direction + 1);
-    }    
-}
-
 [System.Serializable]
 public struct HexCoordinates
 {
@@ -76,6 +27,19 @@ public struct HexCoordinates
 
     public HexCoordinates(int x, int z)
     {
+        if (HexMetrics.Wrapping)
+        {
+            int oX = x + z / 2;
+            if (oX < 0)
+            {
+                x += HexMetrics.wrapSize;
+            }
+            else if (oX >= HexMetrics.wrapSize)
+            {
+                x -= HexMetrics.wrapSize;
+            }
+        }
+
         this.x = x;
         this.z = z;
     }
@@ -101,7 +65,7 @@ public struct HexCoordinates
 
     public static HexCoordinates FromPosition(Vector3 position)
     {
-        float x = position.x / (HexMetrics.innerRadius * 2f);
+        float x = position.x / HexMetrics.innerDiameter;
         float y = -x;
 
         float offset = position.z / (HexMetrics.outerRadius * 3f);
@@ -130,6 +94,65 @@ public struct HexCoordinates
         return new HexCoordinates(iX, iZ);
     }
 
+    // 六边形坐标系转世界坐标
+    public static Vector2 HexToGameCoordinateV2(int x, int z)
+    {
+        Vector2 position = new Vector2(0f, 0f);
+        position.x = (x + z * 0.5f) * (HexMetrics.innerRadius * 2f);
+        // position.y = 0f;
+        position.y = z * (HexMetrics.outerRadius * 1.5f);
+        return Vector2.zero;
+    }
+
+    // 六边形坐标系转世界坐标
+    public static Vector3 HexToGameCoordinateV3(int x, int z)
+    {
+        return HexToGameCoordinateV3(x, 0, z);
+    }
+
+    // 六边形坐标系转世界坐标
+    public static Vector3 HexToGameCoordinateV3(int x, int y, int z)
+    {
+        Vector3 position = new Vector3(0f, 0f, 0f);
+        position.x = (x + z * 0.5f) * (HexMetrics.innerRadius * 2f);
+        position.y = HexMetrics.cellHeight * y;
+        position.z = z * (HexMetrics.outerRadius * 1.5f);
+
+        return position;
+    }
+
+    // 世界坐标系转六边形坐标
+    public static HexVector GameToHexCoordinate(Vector3 position)
+    {
+        float x = position.x / (HexMetrics.innerRadius * 2f);
+        float y = -x;
+
+        float offset = position.z / (HexMetrics.outerRadius * 3f);
+        x -= offset;
+        y -= offset;
+        
+        int iX = Mathf.RoundToInt(x);
+        int iY = Mathf.RoundToInt(y);
+        int iZ = Mathf.RoundToInt(-x - y);
+        
+        if (iX + iY + iZ != 0)
+        {
+            Debug.Log("xxxxxxxxxxxxxxxxxx");
+            float dX = Mathf.Abs(x - iX);
+            float dY = Mathf.Abs(y - iY);
+            float dZ = Mathf.Abs(-x - y - iZ);
+            if (dX > dY && dX > dZ)
+            {
+                iX = -iY - iZ;
+            }
+            else if (dZ > dY)
+            {
+                iZ = -iX - iY;
+            }
+        }
+
+        return new HexVector(iX, iZ);
+    }
     /*
     public override string ToString()
     {
@@ -153,9 +176,33 @@ public struct HexCoordinates
 
     public int DistanceTo(HexCoordinates other)
     {
-        return ((x < other.x ? other.x - x : x - other.x) +
-            (Y < other.Y ? other.Y - Y : Y - other.Y) +
-            (z < other.z ? other.z - z : z - other.z)) / 2;
+        int xy =
+            (x < other.x ? other.x - x : x - other.x) +
+            (Y < other.Y ? other.Y - Y : Y - other.Y);
+
+        if (HexMetrics.Wrapping)
+        {
+            other.x += HexMetrics.wrapSize;
+            int xyWrapped =
+                (x < other.x ? other.x - x : x - other.x) +
+                (Y < other.Y ? other.Y - Y : Y - other.Y);
+            if (xyWrapped < xy)
+            {
+                xy = xyWrapped;
+            }
+            else
+            {
+                other.x -= 2 * HexMetrics.wrapSize;
+                xyWrapped =
+                    (x < other.x ? other.x - x : x - other.x) +
+                    (Y < other.Y ? other.Y - Y : Y - other.Y);
+                if (xyWrapped < xy)
+                {
+                    xy = xyWrapped;
+                }
+            }
+        }
+        return (xy + (z < other.z ? other.z - z : z - other.z)) / 2;
     }
 
     public override string ToString()

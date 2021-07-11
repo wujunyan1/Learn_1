@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class RoundObject : Object
+public interface RoundObject
 {
-    public virtual void NextRound()
-    {
+    void NextRound();
 
-    }
+    void LaterNextRound();
 }

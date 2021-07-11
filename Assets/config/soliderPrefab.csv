@@ -1,0 +1,4 @@
+key,prefabPath,soliderKey,generaPath
+key,资源路径,对应数据模板,将军资源路径
+string,string,string,string
+SwordCavalry_1,prefabs/SwordCavalry,cavalry_s_1,prefabs/SwordCavalryGenera

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HeroRes : MonoBehaviour
+public class HeroRes
 {
     public int index;
     public string id;

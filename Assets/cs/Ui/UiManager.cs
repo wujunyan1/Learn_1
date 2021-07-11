@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class UiManager : MonoBehaviour
+public class UiManager : EventComponent
 {
     public static UiManager instance;
 
@@ -16,24 +16,51 @@ public class UiManager : MonoBehaviour
 
     bool menuOpen = false;
 
+    List<View> views;
+    Dictionary<string, string> uiPaths;
+
     private void Awake()
     {
         instance = this;
+        views = new List<View>();
+
+        RegisterUI();
     }
 
-    public void Update()
+    private void Start()
     {
-        if (Input.GetKeyUp(KeyCode.Escape))
+        this.RegisterEvent("OPEN_UI", OpenUI);
+        
+    }
+
+    void RegisterUI()
+    {
+        uiPaths = new Dictionary<string, string>();
+
+        uiPaths.Add("SaveOrLoadUI", "prefabs/UI/SaveLoadMenu");
+        uiPaths.Add("CreateNewGameUI", "prefabs/UI/NewMapMenu");
+    }
+
+    void OpenUI(UEvent evt)
+    {
+        UObject objs = (UObject)evt.eventParams;
+        string uiName = (string)objs.Get("UI_NAME");
+
+        string uiPath;
+        if(uiPaths.TryGetValue(uiName, out uiPath))
         {
-            if (menuOpen)
-            {
-                Close();
-            }
-            else
-            {
-                Open();
-            }
+            LoadPrefabs(uiPath, objs);
         }
+        
+    }
+
+    void LoadPrefabs(string ui_path, UObject o)
+    {
+        GameObject prefab = Resources.Load(ui_path) as GameObject;
+        GameObject v = Instantiate(prefab, this.transform);
+
+        View vi = v.GetComponent<View>();
+        vi.Open(o);
     }
 
     void Open()
@@ -45,6 +72,7 @@ public class UiManager : MonoBehaviour
 
     void Close()
     {
+
         menuOpen = false;
         CameraMove.Locked = false;
         baseMenu.SetActive(false);

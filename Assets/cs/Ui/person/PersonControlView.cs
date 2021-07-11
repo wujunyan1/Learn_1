@@ -11,7 +11,7 @@ public class PersonControlView : View
     public PersonControl control;
     public Button buttonPrefab;
 
-    public override void Open()
+    public override void Open(UObject o)
     {
         UpdateView();
         this.gameObject.SetActive(true);
@@ -56,6 +56,6 @@ public class PersonControlView : View
 
     public void TouchFunc(ObjFunction func)
     {
-        func.OnStartBtn();
+        
     }
 }

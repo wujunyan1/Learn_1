@@ -1,0 +1,13 @@
+ManifestFileVersion: 0
+CRC: 3526477706
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: hero_head.abs
+      Dependencies: {}
+    Info_1:
+      Name: troops_prefabs.abs
+      Dependencies: {}
+    Info_2:
+      Name: uibuild.abs
+      Dependencies: {}

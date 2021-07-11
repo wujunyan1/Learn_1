@@ -4,63 +4,91 @@ using UnityEngine;
 using System.IO;
 
 // 军营
-public class Barracks : CityBuild
+public class Barracks : CityBuild, SaveLoadInterface, RoundObject
 {
-    // 该城市内的己方英雄
-    List<Hero> heros;
+    List<int> troopList;
 
+    // param1 最大建筑数
     public Barracks()
     {
-        name = "兵营";
-        heros = new List<Hero>();
         type = CityBuildType.Barracks;
+
+        troopList = new List<int>();
     }
+
+
+    public override void Init(CityBuildConfig cityBuildConfig)
+    {
+        level = cityBuildConfig.level;
+        isBuild = true;
+        SetConfig(CityBuildConfigExtend.GetCityBuildConfig(type, level));
+    }
+
+    public override void SetCity(City city)
+    {
+        base.SetCity(city);
+
+        city.RegisterListener("CanRecruitTroop", CanRecruitTroop);
+    }
+
+    public override void StartEffect()
+    {
+        base.StartEffect();
+
+        troopList.Clear();
+
+        string[] strs = config.param1.Split(',');
+        foreach (var str in strs)
+        {
+            troopList.Add(int.Parse(str));
+        }
+    }
+    
 
     public override void Save(BinaryWriter writer)
     {
         base.Save(writer);
+    }
 
-        int number = heros.Count;
-        writer.Write((byte)number);
-        foreach (Hero hero in heros)
+    public override IEnumerator Load(BinaryReader reader)
+    {
+        IEnumerator itor = base.Load(reader);
+
+        while (itor.MoveNext())
         {
-            hero.Save(writer);
         }
+
+        SetConfig(CityBuildConfigExtend.GetCityBuildConfig(type, level));
+        yield return null;
     }
 
-    public override void Load(BinaryReader reader)
+    public override void NextRound()
     {
-        base.Load(reader);
+        base.NextRound();
+    }
 
-        int number = reader.ReadByte();
-        for (int i = 0; i < number; i++)
+    public override void LaterNextRound()
+    {
+        base.LaterNextRound();
+    }
+
+    void CanRecruitTroop(UEvent e)
+    {
+        UObject o = (UObject)e.eventParams;
+
+        // o.GetT<City>("city", null);
+        o.GetT<City>("city", null);
+
+        int troopsIndex = (int)o.Get("troopIndex");
+        bool result = (bool)o.Get("result");
+
+        foreach (var troopId in troopList)
         {
-            Hero hero = HeroFactory.CreateHero();
-            hero.Load(reader);
-            AddHero(hero);
-        }
-    }
-
-    public void AddHero(Hero hero)
-    {
-        heros.Add(hero);
-    }
-
-    public void RemoveHero(Hero hero)
-    {
-        heros.Remove(hero);
-    }
-
-    public Hero GetHero(int heroId)
-    {
-        foreach (Hero hero in heros)
-        {
-            if(hero.Id == heroId)
+            if(troopId == troopsIndex)
             {
-                return hero;
+                o.Set("result", true);
+                return;
             }
         }
-
-        return null;
     }
 }

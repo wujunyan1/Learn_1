@@ -15,6 +15,8 @@ public class HexGridChunk : MonoBehaviour
     // 河流
     public HexMesh rivers;
 
+    public HexMesh roads;
+
     // 湖泊
     public HexMesh lakes;
 
@@ -23,6 +25,10 @@ public class HexGridChunk : MonoBehaviour
 
     // 河口
     public HexMesh estuaries;
+
+    // 边界线
+    public HexMesh boundary;
+
 
     public HexFeatureManager features;
 
@@ -35,6 +41,8 @@ public class HexGridChunk : MonoBehaviour
     public CollionClick click;
     int targetMask;
 
+    Material terrainMaterial;
+
     // 初始化地图
     public void Awake()
     {
@@ -43,10 +51,7 @@ public class HexGridChunk : MonoBehaviour
         gridCanvas = GetComponentInChildren<Canvas>();
         //hexMesh = GetComponentInChildren<HexMesh>();
 
-        //Random.InitState(mapSeed);
-        //int random = Random.Range(0, 1000);
-
-        //click.
+        terrainMaterial = terrain.GetComponent<MeshRenderer>().material;
 
         CreateCells();
     }
@@ -58,8 +63,6 @@ public class HexGridChunk : MonoBehaviour
 
     public void AddCell(int index, HexCell cell)
     {
-        //Debug.Log(index);
-
         cells[index] = cell;
         cell.chunkIndex = index;
         cell.transform.SetParent(transform, false);
@@ -67,7 +70,7 @@ public class HexGridChunk : MonoBehaviour
         cell.chunk = this;
     }
 
-    void Start()
+    public void StartGenerateMap()
     {
         Triangulate(cells);
     }
@@ -82,18 +85,35 @@ public class HexGridChunk : MonoBehaviour
         Triangulate(cell);
     }
 
-
-
-    // 渲染所以六边形
-    public void Triangulate(HexCell[] cells)
+    public void ClearMesh()
     {
         // 清楚渲染
         terrain.Clear();
+        roads.Clear();
         rivers.Clear();
         lakes.Clear();
         lakesShore.Clear();
         estuaries.Clear();
         features.Clear();
+    }
+
+    public void ApplyMesh()
+    {
+        //渲染
+        terrain.Apply();
+        roads.Apply();
+        rivers.Apply();
+        lakes.Apply();
+        lakesShore.Apply();
+        estuaries.Apply();
+        features.Apply();
+    }
+
+    // 渲染所以六边形
+    public void Triangulate(HexCell[] cells)
+    {
+        // 清楚渲染
+        ClearMesh();
 
         for (int i = 0; i < cells.Length; i++)
         {
@@ -108,17 +128,14 @@ public class HexGridChunk : MonoBehaviour
             cell.ShaderData.RefreshTerrain(cell);
         }
 
-        terrain.Apply();
-        rivers.Apply();
-        lakes.Apply();
-        lakesShore.Apply();
-        estuaries.Apply();
-        features.Apply();
+        ApplyMesh();
     }
 
     // 渲染某个六边形
     public void Triangulate(HexCell cell)
     {
+        features.ClearFeature(cell);
+
         Vector3 center = cell.transform.localPosition;
         for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
         {
@@ -132,11 +149,18 @@ public class HexGridChunk : MonoBehaviour
             TriangulateWithRiverConnection(cell);
         }
 
-        //features.AddFeature(cell);
-        if(cell.Build != null)
+        // 处理道路连接点 
+        if (cell.HasRoads)
         {
-            features.AddBuildFeature(cell);
+            TriangulateRoadAdjacentToRiver(cell);
+            //TriangulateWithRiverConnection(cell);
         }
+
+        //features.AddFeature(cell);
+        //if (cell.Build != null)
+        //{
+        //    features.AddBuildFeature(cell);
+        //}
     }
 
     // 渲染某个方向的三角形
@@ -158,51 +182,14 @@ public class HexGridChunk : MonoBehaviour
         //  三角形区域
         if (cell.HasRiver())
         {
-            //Debug.Log(cell.HasRiver());
-            // 这条边是否有河流
-            if (cell.HasRiverThroughEdge(direction))
-            {
-                e.v3.y = cell.StreamBedY;
-
-                // 是湖泊
-                if (cell.IsLakes())
-                {
-
-                }
-
-                //Debug.Log(cell.HasRiverBeginOrEnd());
-                // 只有流入或者流出
-                if (cell.HasRiverBeginOrEnd())
-                {
-                    TriangulateWithRiverBeginOrEnd(direction, cell, center, e);
-                }
-                else
-                {
-                    TriangulateWithRiver(direction, cell, center, e);
-                }
-            }
-            else
-            {
-                if (cell.HasRiverBeginOrEnd())
-                {
-                    TriangulateEdgeFan(center, e, cell.index);
-                }
-                else
-                {
-                    TriangulateWithNoRiver(direction, cell, center, e);
-                }
-                //TriangulateEdgeFan(center, e, cell.color);
-
-                // 添加地上部分
-                Vector3 v1 = Vector3.Lerp(center, e.v1, 0.35f);
-                Vector3 v5 = Vector3.Lerp(center, e.v5, 0.35f);
-                features.AddFeature(cell, v1, v5, e.v1, e.v5);
-            }
+            TriangulateAdjacentToRiver(direction, cell, center, e);
         }
         else
         {
-            TriangulateEdgeFan(center, e, cell.index);
-            features.AddFeature(cell, center, e.v1, e.v5);
+            // TriangulateEdgeFan(center, e, cell.index);
+            // features.AddFeature(cell, center, e.v1, e.v5);
+
+            TriangulateWithoutRiver(direction, cell, center, e);
         }
 
         // 三角形外边区域 两个块之间的连接区域
@@ -210,6 +197,77 @@ public class HexGridChunk : MonoBehaviour
         {
             TriangulateConnection(direction, cell, e);
         }
+    }
+
+    void TriangulateAdjacentToRiver(
+        HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e
+    )
+    {
+        //Debug.Log(cell.HasRiver());
+        // 这条边是否有河流
+        if (cell.HasRiverThroughEdge(direction))
+        {
+            e.v3.y = cell.StreamBedY;
+            // 是湖泊
+            if (cell.IsLakes())
+            {
+
+            }
+
+            //Debug.Log(cell.HasRiverBeginOrEnd());
+            // 只有流入或者流出
+            if (cell.HasRiverBeginOrEnd())
+            {
+                TriangulateWithRiverBeginOrEnd(direction, cell, center, e);
+            }
+            else
+            {
+                TriangulateWithRiver(direction, cell, center, e);
+            }
+        }
+        else
+        {
+            // 这边是河流的就不画路了
+            if (cell.HasRoads)
+            {
+                //TriangulateRoadAdjacentToRiver(direction, cell, center, e);
+            }
+
+            if (cell.HasRiverBeginOrEnd())
+            {
+                TriangulateEdgeFan(center, e, cell.index);
+            }
+            else
+            {
+                TriangulateWithNoRiver(direction, cell, center, e);
+            }
+            //TriangulateEdgeFan(center, e, cell.color);
+
+            // 添加地上部分
+            Vector3 v1 = Vector3.Lerp(center, e.v1, 0.35f);
+            Vector3 v5 = Vector3.Lerp(center, e.v5, 0.35f);
+            features.AddFeature(cell, v1, v5, e.v1, e.v5);
+        }
+    }
+
+    // 没有河流的六边形的某边三角形
+    void TriangulateWithoutRiver(
+        HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e
+    )
+    {
+        TriangulateEdgeFan(center, e, cell.index);
+        features.AddFeature(cell, center, e.v1, e.v5);
+
+        //if (cell.HasRoads)
+        //{
+        //    Vector2 interpolators = GetRoadInterpolators(direction, cell);
+        //    TriangulateRoad(
+        //        center,
+        //        Vector3.Lerp(center, e.v1, interpolators.x),
+        //        Vector3.Lerp(center, e.v5, interpolators.y),
+        //        e, cell.HasRoadThroughEdge(direction)
+        //    );
+        //}
     }
 
     void TriangulateConnection(HexDirection direction, HexCell cell, EdgeVertices e1)
@@ -224,9 +282,13 @@ public class HexGridChunk : MonoBehaviour
         bridge.y = neighbor.transform.localPosition.y - cell.transform.localPosition.y;
         EdgeVertices e2 = new EdgeVertices(e1.v1 + bridge, e1.v5 + bridge);
 
+        bool hasRiver = cell.HasRiverThroughEdge(direction);
+        bool hasRoad = cell.HasRoadThroughEdge(direction);
+
         // 这个方向有河流
-        if (cell.HasRiverThroughEdge(direction))
+        if (hasRiver)
         {
+            e1.v3.y = cell.StreamBedY;
             e2.v3.y = neighbor.StreamBedY;
 
             Vector3 indices;
@@ -241,7 +303,7 @@ public class HexGridChunk : MonoBehaviour
                 if (!neighbor.IsLakes())
                 {
                     bool reversed = cell.IsInComingRiverDirection(direction);
-                    TriangulateRiverQuad(e1.v2, e1.v4, e2.v2, e2.v4, cell.RiverSurfaceY, neighbor.RiverSurfaceY, 0.6f, reversed, indices);
+                    TriangulateRiverQuad(e1.v1, e1.v5, e2.v1, e2.v5, cell.RiverSurfaceY, neighbor.RiverSurfaceY, 0.6f, reversed, indices);
                 }
                 // 邻居是湖泊
                 else if (neighbor.IsLakes())
@@ -268,11 +330,11 @@ public class HexGridChunk : MonoBehaviour
         HexEdgeType _type = cell.GetEdgeType(direction);
         if (_type == HexEdgeType.Slope)
         {
-            TriangulateEdgeTerraces(e1, cell, e2, neighbor);
+            TriangulateEdgeTerraces(e1, cell, e2, neighbor, hasRoad);
         }
         else
         {
-            TriangulateEdgeStrip(e1, weights1, cell.index, e2, weights2, neighbor.index);
+            TriangulateEdgeStrip(e1, weights1, cell.index, e2, weights2, neighbor.index, hasRoad);
 
             // 平坦的并且2个区域类型相同
             if(_type == HexEdgeType.Flat && cell.TerrainType == neighbor.TerrainType)
@@ -283,6 +345,10 @@ public class HexGridChunk : MonoBehaviour
 
         // AddQuad(v1, v2, v3, v4);
         // AddQuadColor(cell.color, neighbor.color);
+
+        features.AddWall(e1, cell, e2, neighbor, direction,
+            hasRiver, hasRoad
+            );
 
 
         // 三角形部分
@@ -320,12 +386,14 @@ public class HexGridChunk : MonoBehaviour
                     v5, nextNeighbor, e1.v5, cell, e2.v5, neighbor
                 );
             }
+
+            features.AddWall(e1.v5, cell, e2.v5, neighbor, direction, v5, nextNeighbor, direction.Next());
         }
     }
 
     // 渲染连接四边形及其颜色
     //  Vector3 beginLeft, Vector3 beginRight, HexCell beginCell, Vector3 endLeft, Vector3 endRight, HexCell endCell
-    void TriangulateEdgeTerraces(EdgeVertices begin, HexCell beginCell, EdgeVertices end, HexCell endCell)
+    void TriangulateEdgeTerraces(EdgeVertices begin, HexCell beginCell, EdgeVertices end, HexCell endCell, bool hasRoad)
     {
         EdgeVertices e2 = EdgeVertices.TerraceLerp(begin, end, 1);
         Color w2 = HexMetrics.TerraceLerp(weights1, weights2, 1);
@@ -333,7 +401,7 @@ public class HexGridChunk : MonoBehaviour
         float i2 = endCell.index;
 
 
-        TriangulateEdgeStrip(begin, weights1, i1, e2, w2, i2);
+        TriangulateEdgeStrip(begin, weights1, i1, e2, w2, i2, hasRoad);
 
         for (int i = 2; i < HexMetrics.terraceSteps; i++)
         {
@@ -341,10 +409,10 @@ public class HexGridChunk : MonoBehaviour
             Color w1 = w2;
             e2 = EdgeVertices.TerraceLerp(begin, end, i);
             w2 = HexMetrics.TerraceLerp(weights1, weights2, i);
-            TriangulateEdgeStrip(e1, w1, i1, e2, w2, i2);
+            TriangulateEdgeStrip(e1, w1, i1, e2, w2, i2, hasRoad);
         }
 
-        TriangulateEdgeStrip(e2, w2, i1, end, weights2, i2);
+        TriangulateEdgeStrip(e2, w2, i1, end, weights2, i2, hasRoad);
 
 
         //Vector3 v3 = HexMetrics.TerraceLerp(beginLeft, endLeft, 1);
@@ -610,6 +678,8 @@ public class HexGridChunk : MonoBehaviour
         EdgeVertices m = new EdgeVertices(Vector3.Lerp(center, e.v1, 0.5f), Vector3.Lerp(center, e.v5, 0.5f));
         m.v3.y = e.v3.y;
 
+        Vector3 dir = e.v2 - m.v1;
+
 
         TriangulateWithNoRiver(direction, cell, center, e);
 
@@ -624,7 +694,7 @@ public class HexGridChunk : MonoBehaviour
             {
                 v = 0.6f;
             }
-            TriangulateRiverQuad(m.v1, m.v5, e.v2, e.v4, cell.RiverSurfaceY, cell.RiverSurfaceY, v, reversed, indices);
+            TriangulateRiverQuad(e.v1 - dir, e.v5 - dir, e.v1, e.v5, cell.RiverSurfaceY, cell.RiverSurfaceY, v, reversed, indices);
         }
 
     }
@@ -632,6 +702,8 @@ public class HexGridChunk : MonoBehaviour
     // 画河道开始和结束
     void TriangulateWithRiverBeginOrEnd(HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e)
     {
+        //Debug.Log("TriangulateWithRiverBeginOrEnd");
+
         EdgeVertices m = new EdgeVertices(Vector3.Lerp(center, e.v1, 0.5f), Vector3.Lerp(center, e.v5, 0.5f));
         m.v3.y = e.v3.y;
 
@@ -640,13 +712,15 @@ public class HexGridChunk : MonoBehaviour
 
         if (!cell.IsLakes())
         {
+            //Debug.Log("!cell.IsLakes");
             bool reversed = cell.IsInComingRiverDirection(direction);
 
             Vector3 indices;
             indices.x = indices.y = indices.z = cell.index;
 
-            e.v2.y = e.v4.y = cell.RiverSurfaceY;
-            rivers.AddTriangle(center, e.v2, e.v4);
+            e.v1.y = e.v5.y = cell.RiverSurfaceY;
+            rivers.AddTriangle(center, e.v1, e.v5);
+            
             if (reversed)
             {
                 rivers.AddTriangleUV(
@@ -669,13 +743,286 @@ public class HexGridChunk : MonoBehaviour
         //);
     }
 
+    // 需要修改，有问题
     // 渲染格子中心多段河流连接处
     void TriangulateWithRiverConnection(HexCell cell)
     {
-        if(cell.GetRiverCount() <= 1)
+        int riverCount = cell.GetRiverCount();
+        if (riverCount <= 1)
         {
             return;
         }
+        // 交点
+        Vector3[] intersections = new Vector3[riverCount + 1];
+        Vector2[] intersectionRiver = new Vector2[riverCount + 1];
+
+        Vector3 center = cell.transform.localPosition;
+        Vector3 centerD = new Vector3(center.x, cell.StreamBedY, center.z);
+
+        HexDirection firstRiverDir = HexDirection.NE;
+        Vector3 leftPoint = center + HexMetrics.GetFirstSolidCorner(firstRiverDir) * 0.5f;
+        Vector3 rightPoint = center + HexMetrics.GetSecondSolidCorner(firstRiverDir) * 0.5f;
+        Vector3 briDir = HexMetrics.GetBridge(firstRiverDir);
+
+        // 当前河流方向中间低位置
+        Vector3 riverDPoint = (leftPoint + rightPoint) / 2;
+        riverDPoint.y = centerD.y;
+
+        Vector3 riverCenter = new Vector3(center.x, cell.RiverSurfaceY, center.z);
+
+        List<HexDirection> riverDir = new List<HexDirection>();
+        
+
+        // 先找一条河流
+        for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            RiverDirection dir = cell.GetRiverDirection(d);
+            if(dir != RiverDirection.Null)
+            {
+                firstRiverDir = d;
+                leftPoint = center + HexMetrics.GetFirstSolidCorner(d) * 0.5f;
+                rightPoint = center + HexMetrics.GetSecondSolidCorner(d) * 0.5f;
+
+                riverDPoint = (leftPoint + rightPoint) / 2;
+                riverDPoint.y = centerD.y;
+
+                briDir = HexMetrics.GetBridge(d);
+                briDir = briDir;
+
+                riverDir.Add(d);
+                break;
+            }
+        }
+
+        // shader使用数据
+        Vector3 indices;
+        indices.x = indices.y = indices.z = cell.index;
+
+        Vector3 lastPoint = leftPoint;
+        List<Vector3> points = new List<Vector3>();
+        points.Add(rightPoint);
+
+        List<Vector3> pos = new List<Vector3>();
+        pos.Add(riverDPoint);
+        pos.Add(rightPoint);
+
+        int intersection_index = 1;
+        List<Vector3> riverPoint = new List<Vector3>();
+        List<Vector3> riverPointUV = new List<Vector3>();
+        //riverPoint.Add(leftPoint);
+
+
+        //  以第一条河流为起始，循环一圈
+        HexDirection nextDir = firstRiverDir;
+        RiverDirection beforRiverDir = cell.GetRiverDirection(nextDir);
+        for (int i = 0; i < 6; i++)
+        {
+            nextDir = nextDir.Next();
+
+            // 找到下一个河流
+            RiverDirection nextRiverDir = cell.GetRiverDirection(nextDir);
+            if (nextRiverDir != RiverDirection.Null)
+            {
+                Vector3 nextLeftPoint = center + HexMetrics.GetFirstSolidCorner(nextDir) * 0.5f;
+                Vector3 nextRightPoint = center + HexMetrics.GetSecondSolidCorner(nextDir) * 0.5f;
+                Vector3 nextDPoint = (nextLeftPoint + nextRightPoint) / 2;
+                nextDPoint.y = centerD.y;
+
+                Vector3 nextBriDir = HexMetrics.GetBridge(nextDir);
+                nextBriDir = nextBriDir;
+
+                Vector3 Intersection = Point.GetRayIntersection(rightPoint, briDir, nextLeftPoint, nextBriDir);
+                intersections[intersection_index] = Intersection;
+
+                // 表示河流流向和速度
+                if (beforRiverDir == RiverDirection.Incoming || nextRiverDir == RiverDirection.Incoming)
+                {
+                    if(beforRiverDir == RiverDirection.Outgoing || nextRiverDir == RiverDirection.Outgoing)
+                    {
+                        intersectionRiver[intersection_index] = new Vector2(0.5f, 0.5f);
+                    }
+                    else
+                    {
+                        intersectionRiver[intersection_index] = new Vector2(0.4f, 0.4f);
+                    }
+                }
+                else
+                {
+                    intersectionRiver[intersection_index] = new Vector2(0.6f, 0.6f);
+                }
+                //intersectionRiver[intersection_index] = new Vector2(
+                //    beforRiverDir == RiverDirection.Incoming ? 0.4f : 0.6f,
+                //    nextRiverDir == RiverDirection.Incoming ? 0.4f : 0.6f
+                //    );
+
+                intersection_index++;
+
+
+                riverPoint.Add(riverCenter);
+                riverPoint.Add(rightPoint);
+                riverPoint.Add(Intersection);
+
+                if (beforRiverDir == RiverDirection.Incoming)
+                {
+                    riverPointUV.Add(new Vector2(0.6f, 0.6f));
+                    riverPointUV.Add(new Vector2(0.4f, 0.4f));
+                    riverPointUV.Add(new Vector2(0.6f, 0.6f));
+                }
+                else
+                {
+                    riverPointUV.Add(new Vector2(0.2f, 0.2f));
+                    riverPointUV.Add(new Vector2(0.4f, 0.4f));
+                    riverPointUV.Add(new Vector2(0.2f, 0.2f));
+                }
+
+
+                leftPoint = nextLeftPoint;
+                rightPoint = nextRightPoint;
+
+                //riverPoint.Add(nextLeftPoint);
+                //riverPoint.Add(nextRightPoint);
+
+                // points.Add(rightPoint);
+
+                // 画平面上的地
+                for (int j = 0; j < points.Count - 1; j++)
+                {
+                    Vector3 v1 = points[j];
+                    Vector3 v2 = Intersection;
+                    Vector3 v3 = points[j + 1];
+
+                    // 汇合处顶部多余部分
+                    terrain.AddTriangle(v1, v3, v2);
+                    terrain.AddTriangleCellData(indices, weights1);
+                }
+
+                points.Clear();
+                points.Add(rightPoint);
+
+
+                pos.Add(Intersection);
+                pos.Add(nextLeftPoint);
+                pos.Add(nextDPoint);
+
+                // 画河道两边的坡
+                for (int j = 0; j < pos.Count - 1; j++)
+                {
+                    Vector3 v1 = centerD;
+                    Vector3 v2 = pos[j];
+                    Vector3 v3 = pos[j + 1];
+
+                    // 汇合处顶部多余部分
+                    terrain.AddTriangle(v1, v2, v3);
+                    terrain.AddTriangleCellData(indices, weights1);
+                }
+
+                pos.Clear();
+                pos.Add(nextDPoint);
+                pos.Add(rightPoint);
+
+
+                briDir = nextBriDir;
+
+                riverDir.Add(nextDir);
+
+                beforRiverDir = nextRiverDir;
+
+
+
+                Vector3 riverV2 = new Vector3(nextLeftPoint.x, cell.RiverSurfaceY, nextLeftPoint.z);
+                Vector3 riverV3 = new Vector3(rightPoint.x, cell.RiverSurfaceY, rightPoint.z);
+
+                Vector2 UV = new Vector2(0.4f, 0.4f);
+                Vector2 EndUV = new Vector2(0.2f, 0.2f);
+                if (nextRiverDir == RiverDirection.Incoming)
+                {
+                    UV = new Vector2(0.4f, 0.4f);
+                    EndUV = new Vector2(0.6f, 0.6f);
+                }
+
+                if (!cell.IsUnderwater)
+                {
+                    rivers.AddTriangle(riverCenter, riverV2, riverV3);
+                    rivers.AddTriangleUV(EndUV, UV, UV);
+                    rivers.AddTriangleCellData(indices, weights1);
+                }
+                
+
+                riverPoint.Add(riverCenter);
+                riverPoint.Add(Intersection);
+                riverPoint.Add(nextLeftPoint);
+
+                riverPointUV.Add(EndUV);
+                riverPointUV.Add(EndUV);
+                riverPointUV.Add(UV);
+            }
+            else
+            {
+                Vector3 nextLeftPoint = center + HexMetrics.GetFirstSolidCorner(nextDir) * 0.5f;
+                Vector3 nextRightPoint = center + HexMetrics.GetSecondSolidCorner(nextDir) * 0.5f;
+
+                points.Add(nextRightPoint);
+            }
+        }
+        
+        //terrain.AddTriangle(centerD, pos[0], pos[1]);
+        //terrain.AddTriangleCellData(indices, weights1);
+
+        intersections[0] = intersections[intersection_index - 1];
+        intersectionRiver[0] = intersectionRiver[intersection_index - 1];
+
+
+        for (int i = 0; i < riverPoint.Count - 2;)
+        {
+            Vector3 v1 = riverPoint[i];
+            Vector3 v2 = riverPoint[i + 1];
+            Vector3 v3 = riverPoint[i + 2];
+
+            if (!cell.IsUnderwater) { 
+                rivers.AddTriangle(v1, new Vector3(v2.x, cell.RiverSurfaceY, v2.z),
+                    new Vector3(v3.x, cell.RiverSurfaceY, v3.z));
+                rivers.AddTriangleUV(riverPointUV[i], riverPointUV[i + 1], riverPointUV[i + 2]);
+                rivers.AddTriangleCellData(indices, weights1);
+            }
+
+            i = i + 3;
+        }
+
+        //for (int i = 0; i < cell.GetRiverCount(); i++)
+        //{
+        //    Vector3 v1 = riverPoint[i * 2];
+        //    Vector3 v2 = riverPoint[i * 2 + 1];
+
+        //    Vector3 v3 = intersections[i];
+        //    Vector3 v4 = intersections[i + 1];
+
+        //    // v1.y = v2.y = v3.y = v4.y = cell.RiverSurfaceY;
+
+        //    HexDirection dir = riverDir[i];
+        //    bool reversed = cell.IsInComingRiverDirection(dir);
+        //    TriangulateRiverQuad(v3, v4, v1, v2, cell.RiverSurfaceY, cell.RiverSurfaceY, 0.6f, reversed, indices);
+
+        //}
+
+        //if (intersections.Length > 3)
+        //{
+        //    for (int i = 0; i < intersections.Length - 2; i++)
+        //    {
+        //        Vector3 v1 = intersections[i];
+        //        Vector3 v2 = intersections[i + 1];
+
+        //        Vector3 v3 = intersections[i + 2];
+
+        //        v1.y = v2.y = v3.y = cell.RiverSurfaceY;
+
+        //        rivers.AddTriangle(v1, v2, v3);
+        //        rivers.AddTriangleUV(intersectionRiver[i], intersectionRiver[i + 1], intersectionRiver[i + 2]);
+        //        rivers.AddTriangleCellData(indices, weights1);
+        //    }
+        //}
+
+        return;
+        /**
         //Debug.Log("========================");
         Vector3 center = cell.transform.localPosition;
         List<HexDirection> incoming_rivers = cell.GetRiverDirections(RiverDirection.Incoming);
@@ -733,6 +1080,7 @@ public class HexGridChunk : MonoBehaviour
                 TriangulateWithFourRiverConnection(cell, outgoing_dir);
             }
         }
+        */
     }
 
     // 渲染格子中心3段河流2条流出连接处
@@ -792,7 +1140,7 @@ public class HexGridChunk : MonoBehaviour
         terrain.AddQuad(inEdge.v5, inEdge.v3, d1e.v1, d1e.v3);
         terrain.AddQuadCellData(indices, weights1);
 
-        if(cell.TerrainType != HexTerrainType.Water)
+        if( !cell.IsUnderwater)
         {
             //河流
             //TriangulateRiverTriangle()
@@ -831,7 +1179,7 @@ public class HexGridChunk : MonoBehaviour
         terrain.AddQuad(inEdge.v3, outEdge.v3, inEdge.v5, outEdge.v1);
         terrain.AddQuadCellData(indices, weights1);;
 
-        if (cell.TerrainType != HexTerrainType.Water)
+        if ( !cell.IsUnderwater )
         {
             //河流
             TriangulateRiverQuad(inEdge.v5, inEdge.v1, outEdge.v1, outEdge.v5, cell.RiverSurfaceY, cell.RiverSurfaceY, 0.4f, false, indices);
@@ -920,7 +1268,7 @@ public class HexGridChunk : MonoBehaviour
             terrain.AddQuad(outEdge.v5, outEdge.v3, d1e.v1, d1e.v3);
             terrain.AddQuadCellData(indices, weights1);
 
-            if (cell.TerrainType != HexTerrainType.Water)
+            if ( !cell.IsUnderwater )
             {
                 //河流
                 //TriangulateRiverTriangle()
@@ -963,7 +1311,7 @@ public class HexGridChunk : MonoBehaviour
                 terrain.AddQuad(d1e.v1, outEdge.v5, d1e.v3, outEdge.v3);
                 terrain.AddQuadCellData(indices, weights1);
 
-                if (cell.TerrainType != HexTerrainType.Water)
+                if ( !cell.IsUnderwater )
                 {
                     //河流 d1为对边
                     Vector3 v1 = Vector3.Lerp(d1e.v5, d2e.v1, 0.5f);
@@ -985,7 +1333,7 @@ public class HexGridChunk : MonoBehaviour
                 terrain.AddQuad(d1e.v1, outEdge.v5, d1e.v3, outEdge.v3);
                 terrain.AddQuadCellData(indices, weights1);
 
-                if (cell.TerrainType != HexTerrainType.Water)
+                if ( !cell.IsUnderwater )
                 {
                     //河流
                     Vector3 inJoinVH = Vector3.Lerp(d1e.v5, center_d, 0.5f);
@@ -1061,7 +1409,7 @@ public class HexGridChunk : MonoBehaviour
         terrain.AddTriangle(center_d, outEdge.v3, d1e.v3);
         terrain.AddTriangleCellData(indices, weights1);
 
-        if (cell.TerrainType != HexTerrainType.Water)
+        if ( !cell.IsUnderwater )
         {
             //河流
             TriangulateRiverQuad(d1e.v4, d1e.v2, Vector3.Lerp(d1e.v5, center_d, 0.5f), outEdge.v4, cell.RiverSurfaceY, cell.RiverSurfaceY, 0.4f, false, indices);
@@ -1090,7 +1438,7 @@ public class HexGridChunk : MonoBehaviour
     }
 
     // 对两条边之间一条四边形进行三角化的方法
-    void TriangulateEdgeStrip(EdgeVertices e1, Color w1, float index1, EdgeVertices e2, Color w2, float index2)
+    void TriangulateEdgeStrip(EdgeVertices e1, Color w1, float index1, EdgeVertices e2, Color w2, float index2, bool hasRoad = false)
     {
         terrain.AddQuad(e1.v1, e1.v2, e2.v1, e2.v2);
         terrain.AddQuad(e1.v2, e1.v3, e2.v2, e2.v3);
@@ -1104,6 +1452,11 @@ public class HexGridChunk : MonoBehaviour
         terrain.AddQuadCellData(indices, w1, w2);
         terrain.AddQuadCellData(indices, w1, w2);
         terrain.AddQuadCellData(indices, w1, w2);
+
+        if (hasRoad)
+        {
+            TriangulateRoadSegment(e1.v2, e1.v3, e1.v4, e2.v2, e2.v3, e2.v4);
+        }
     }
 
     void TriangulateRiverQuad(Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4, Vector3 indices)
@@ -1224,6 +1577,15 @@ public class HexGridChunk : MonoBehaviour
 
         // 连接处
         Vector3 center2 = neighbor.Position;
+        if (neighbor.ColumnIndex < cell.ColumnIndex - 1)
+        {
+            center2.x += HexMetrics.wrapSize * HexMetrics.innerDiameter;
+        }
+        else if (neighbor.ColumnIndex > cell.ColumnIndex + 1)
+        {
+            center2.x -= HexMetrics.wrapSize * HexMetrics.innerDiameter;
+        }
+
         center2.y = center.y;
         EdgeVertices e2 = new EdgeVertices(
             center2 + HexMetrics.GetSecondSolidCorner(direction.Opposite()),
@@ -1257,7 +1619,17 @@ public class HexGridChunk : MonoBehaviour
         HexCell nextNeighbor = cell.GetNeighbor(direction.Next());
         if (nextNeighbor != null)
         {
-            Vector3 v3 = nextNeighbor.Position + (nextNeighbor.IsLakes() ?
+            Vector3 center3 = nextNeighbor.Position;
+            if (nextNeighbor.ColumnIndex < cell.ColumnIndex - 1)
+            {
+                center3.x += HexMetrics.wrapSize * HexMetrics.innerDiameter;
+            }
+            else if (nextNeighbor.ColumnIndex > cell.ColumnIndex + 1)
+            {
+                center3.x -= HexMetrics.wrapSize * HexMetrics.innerDiameter;
+            }
+
+            Vector3 v3 = center3 + (nextNeighbor.IsUnderwater ?
                 HexMetrics.GetFirstLakesCorner(direction.Previous()) :
                 HexMetrics.GetFirstSolidCorner(direction.Previous()));
             v3.y = center.y;
@@ -1366,6 +1738,379 @@ public class HexGridChunk : MonoBehaviour
     }
 
 
+
+    void TriangulateRoad(
+        Vector3 center, Vector3 mL, Vector3 mR, EdgeVertices e, bool hasRoadThroughCellEdge
+    )
+    {
+        if (hasRoadThroughCellEdge)
+        {
+            Vector3 mC = Vector3.Lerp(mL, mR, 0.5f);
+            TriangulateRoadSegment(mL, mC, mR, e.v2, e.v3, e.v4);
+
+            roads.AddTriangle(center, mL, mC);
+            roads.AddTriangle(center, mC, mR);
+
+            roads.AddTriangleUV(
+                new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(1f, 0f)
+            );
+            roads.AddTriangleUV(
+                new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(0f, 0f)
+            );
+        }
+        else
+        {
+            TriangulateRoadEdge(center, mL, mR);
+        }
+    }
+
+    void TriangulateRoadEdge(Vector3 center, Vector3 mL, Vector3 mR)
+    {
+        roads.AddTriangle(center, mL, mR);
+        roads.AddTriangleUV(
+            new Vector2(1f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f)
+        );
+    }
+
+    void TriangulateRoadSegment(
+        Vector3 v1, Vector3 v2, Vector3 v3,
+        Vector3 v4, Vector3 v5, Vector3 v6
+    )
+    {
+        roads.AddQuad(v1, v2, v4, v5);
+        roads.AddQuad(v2, v3, v5, v6);
+        roads.AddQuadUV(0f, 1f, 0f, 0f);
+        roads.AddQuadUV(1f, 0f, 0f, 0f);
+    }
+    
+    // 备份
+    void TriangulateRoadAdjacentToRiver(
+        HexDirection direction, HexCell cell, Vector3 center, EdgeVertices e
+    )
+    {
+        bool hasRoadThroughEdge = cell.HasRoadThroughEdge(direction);
+        bool previousHasRiver = cell.HasRiverThroughEdge(direction.Previous());
+        bool nextHasRiver = cell.HasRiverThroughEdge(direction.Next());
+
+        Vector2 interpolators = GetRoadInterpolators(direction, cell);
+        Vector3 roadCenter = center;
+
+        // 河流初始或结束
+        if (cell.HasRiverBeginOrEnd())
+        {
+            roadCenter += HexMetrics.GetSolidEdgeMiddle(
+                cell.RiverBeginOrEndDirection().Opposite()
+            ) * (1f / 3f);
+
+            Vector3 mL = Vector3.Lerp(roadCenter, e.v1, interpolators.x);
+            Vector3 mR = Vector3.Lerp(roadCenter, e.v5, interpolators.y);
+            TriangulateRoad(roadCenter, mL, mR, e, hasRoadThroughEdge);
+
+            return;
+        }
+
+        if (cell.GetRiverCount() <= 1)
+        {
+            return;
+        }
+        // 多段河流
+
+        // 交点列表
+        Vector3[] intersections = new Vector3[cell.GetRiverCount() + 1];
+
+        Vector3 centerD = new Vector3(center.x, cell.StreamBedY, center.z);
+
+        HexDirection firstRiverDir = HexDirection.NE;
+        Vector3 leftPoint = center + HexMetrics.GetFirstSolidCorner(firstRiverDir) * 0.5f;
+        Vector3 rightPoint = center + HexMetrics.GetSecondSolidCorner(firstRiverDir) * 0.5f;
+        Vector3 briDir = HexMetrics.GetBridge(firstRiverDir);
+
+        Vector3 riverDPoint = (leftPoint + rightPoint) / 2;
+        riverDPoint.y = centerD.y;
+
+
+        // 先找一条河流
+        for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            RiverDirection dir = cell.GetRiverDirection(d);
+            if (dir != RiverDirection.Null)
+            {
+                firstRiverDir = d;
+                leftPoint = center + HexMetrics.GetFirstSolidCorner(d) * 0.5f;
+                rightPoint = center + HexMetrics.GetSecondSolidCorner(d) * 0.5f;
+
+                briDir = HexMetrics.GetBridge(d);
+
+                break;
+            }
+        }
+
+        Vector3 indices;
+        indices.x = indices.y = indices.z = cell.index;
+
+        Vector3 lastPoint = leftPoint;
+        List<Vector3> points = new List<Vector3>();
+        points.Add(rightPoint);
+
+        int intersection_index = 1;
+        bool hasRoad = false;
+
+        //  以第一条河流为起始，循环一圈
+        HexDirection nextDir = firstRiverDir;
+        RiverDirection beforRiverDir = cell.GetRiverDirection(nextDir);
+        for (int i = 0; i < 6; i++)
+        {
+            nextDir = nextDir.Next();
+
+            hasRoad = cell.HasRoadThroughEdge(nextDir) ? true : hasRoad;
+
+            RiverDirection nextRiverDir = cell.GetRiverDirection(nextDir);
+            if (nextRiverDir != RiverDirection.Null)
+            {
+                Vector3 nextLeftPoint = center + HexMetrics.GetFirstSolidCorner(nextDir) * 0.5f;
+                Vector3 nextRightPoint = center + HexMetrics.GetSecondSolidCorner(nextDir) * 0.5f;
+                Vector3 nextDPoint = (nextLeftPoint + nextRightPoint) / 2;
+                nextDPoint.y = centerD.y;
+
+                Vector3 nextBriDir = HexMetrics.GetBridge(nextDir);
+
+                Vector3 Intersection = Point.GetRayIntersection(rightPoint, briDir, nextLeftPoint, nextBriDir);
+                intersections[intersection_index] = Intersection;
+                intersection_index++;
+
+                Debug.Log(Intersection);
+
+                leftPoint = nextLeftPoint;
+                rightPoint = nextRightPoint;
+
+                // points.Add(rightPoint);
+
+                if (hasRoad)
+                {
+                    //TriangulateRoadSegment(mL, mC, mR, e.v2, e.v3, e.v4);
+
+                    // 画平面上的地
+                    for (int j = 0; j < points.Count - 1; j++)
+                    {
+                        Vector3 v1 = points[j];
+                        Vector3 v2 = Intersection;
+                        Vector3 v3 = points[j + 1];
+
+                        // 汇合处顶部多余部分
+                        TriangulateRoadEdge(v2, v1, v3);
+                    }
+
+                    hasRoad = false;
+                }
+
+                points.Clear();
+                points.Add(rightPoint);
+
+                briDir = nextBriDir;
+
+                beforRiverDir = nextRiverDir;
+            }
+            else
+            {
+                Vector3 nextLeftPoint = center + HexMetrics.GetFirstSolidCorner(nextDir) * 0.5f;
+                Vector3 nextRightPoint = center + HexMetrics.GetSecondSolidCorner(nextDir) * 0.5f;
+
+                points.Add(nextRightPoint);
+            }
+        }
+
+        intersections[0] = intersections[intersection_index - 1];
+    }
+
+    // 路的中心位置
+    void TriangulateRoadAdjacentToRiver(HexCell cell)
+    {
+        //Vector2 interpolators = GetRoadInterpolators(direction, cell);
+
+        Vector3 center = cell.transform.localPosition;
+
+        for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            if (cell.HasRoadThroughEdge(d))
+            {
+                EdgeVertices e = new EdgeVertices(
+                    center + HexMetrics.GetFirstSolidCorner(d),
+                    center + HexMetrics.GetSecondSolidCorner(d)
+                );
+
+                Vector3 mL = center + HexMetrics.GetFirstSolidCorner(d) * 0.5f;
+                Vector3 mR = center + HexMetrics.GetSecondSolidCorner(d) * 0.5f;
+                
+                Vector3 mC = Vector3.Lerp(mL, mR, 0.5f);
+
+                TriangulateRoadSegment(mL, mC, mR, e.v2, e.v3, e.v4);
+            }
+        }
+
+        if (cell.GetRiverCount() <= 1)
+        {
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                if (!cell.HasRiverThroughEdge(d))
+                {
+                    EdgeVertices e = new EdgeVertices(
+                        center + HexMetrics.GetFirstSolidCorner(d),
+                        center + HexMetrics.GetSecondSolidCorner(d)
+                    );
+                    Vector2 interpolators = GetRoadInterpolators(d, cell);
+                    TriangulateRoad(
+                        center,
+                        Vector3.Lerp(center, e.v1, interpolators.x),
+                        Vector3.Lerp(center, e.v5, interpolators.y),
+                        e, cell.HasRoadThroughEdge(d)
+                    );
+                }
+            }
+            return;
+        }
+        // 多段河流
+
+        // 交点列表
+        Vector3[] intersections = new Vector3[cell.GetRiverCount() + 1];
+
+        Vector3 centerD = new Vector3(center.x, cell.StreamBedY, center.z);
+
+        HexDirection firstRiverDir = HexDirection.NE;
+        Vector3 leftPoint = center + HexMetrics.GetFirstSolidCorner(firstRiverDir) * 0.5f;
+        Vector3 rightPoint = center + HexMetrics.GetSecondSolidCorner(firstRiverDir) * 0.5f;
+        Vector3 briDir = HexMetrics.GetBridge(firstRiverDir);
+
+        Vector3 riverDPoint = (leftPoint + rightPoint) / 2;
+        riverDPoint.y = centerD.y;
+
+
+        // 先找一条河流
+        for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            RiverDirection dir = cell.GetRiverDirection(d);
+            if (dir != RiverDirection.Null)
+            {
+                firstRiverDir = d;
+                leftPoint = center + HexMetrics.GetFirstSolidCorner(d) * 0.5f;
+                rightPoint = center + HexMetrics.GetSecondSolidCorner(d) * 0.5f;
+
+                riverDPoint = (leftPoint + rightPoint) / 2;
+                riverDPoint.y = centerD.y;
+
+                briDir = HexMetrics.GetBridge(d);
+
+                break;
+            }
+        }
+
+        Vector3 indices;
+        indices.x = indices.y = indices.z = cell.index;
+
+        Vector3 lastPoint = leftPoint;
+        List<Vector3> points = new List<Vector3>();
+        points.Add(rightPoint);
+
+        int intersection_index = 1;
+        bool hasRoad = false;
+
+        //  以第一条河流为起始，循环一圈
+        HexDirection nextDir = firstRiverDir;
+        RiverDirection beforRiverDir = cell.GetRiverDirection(nextDir);
+        for (int i = 0; i < 6; i++)
+        {
+            nextDir = nextDir.Next();
+
+            hasRoad = cell.HasRoadThroughEdge(nextDir) ? true : hasRoad;
+
+            RiverDirection nextRiverDir = cell.GetRiverDirection(nextDir);
+            if (nextRiverDir != RiverDirection.Null)
+            {
+                Vector3 nextLeftPoint = center + HexMetrics.GetFirstSolidCorner(nextDir) * 0.5f;
+                Vector3 nextRightPoint = center + HexMetrics.GetSecondSolidCorner(nextDir) * 0.5f;
+                Vector3 nextDPoint = (nextLeftPoint + nextRightPoint) / 2;
+                nextDPoint.y = centerD.y;
+
+                Vector3 nextBriDir = HexMetrics.GetBridge(nextDir);
+
+                Vector3 Intersection = Point.GetRayIntersection(rightPoint, briDir, nextLeftPoint, nextBriDir);
+                intersections[intersection_index] = Intersection;
+                intersection_index++;
+
+                Debug.Log(Intersection);
+
+                leftPoint = nextLeftPoint;
+                rightPoint = nextRightPoint;
+
+                // points.Add(rightPoint);
+
+                if (hasRoad)
+                {
+                    // 画平面上的地
+                    for (int j = 0; j < points.Count - 1; j++)
+                    {
+                        Vector3 v1 = points[j];
+                        Vector3 v2 = Intersection;
+                        Vector3 v3 = points[j + 1];
+
+                        // 汇合处顶部多余部分
+                        TriangulateRoadEdge(v2, v1, v3);
+                    }
+
+                    hasRoad = false;
+                }
+
+                points.Clear();
+                points.Add(rightPoint);
+
+                briDir = nextBriDir;
+
+                beforRiverDir = nextRiverDir;
+            }
+            else
+            {
+                Vector3 nextLeftPoint = center + HexMetrics.GetFirstSolidCorner(nextDir) * 0.5f;
+                Vector3 nextRightPoint = center + HexMetrics.GetSecondSolidCorner(nextDir) * 0.5f;
+
+                points.Add(nextRightPoint);
+            }
+        }
+
+        intersections[0] = intersections[intersection_index - 1];
+    }
+
+    Vector2 GetRoadInterpolators(HexDirection direction, HexCell cell)
+    {
+        Vector2 interpolators;
+        if (cell.HasRoadThroughEdge(direction))
+        {
+            interpolators.x = interpolators.y = 0.5f;
+        }
+        else
+        {
+            interpolators.x =
+                cell.HasRoadThroughEdge(direction.Previous()) ? 0.5f : 0.25f;
+            interpolators.y =
+                cell.HasRoadThroughEdge(direction.Next()) ? 0.5f : 0.25f;
+        }
+        return interpolators;
+    }
+
+
+
+    ///////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////城墙/////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////
+
+
+    public void AddWall(
+        EdgeVertices near, HexCell nearCell,
+        EdgeVertices far, HexCell farCell
+    )
+    {
+    }
+
+
+
     // 添加建筑
     public void AddBuild(HexCell cell, BuildType type)
     {
@@ -1407,8 +2152,200 @@ public class HexGridChunk : MonoBehaviour
         }
     }
 
-    public void OnCancelCell()
-    {
 
+    public void SetCellMapDataShader(bool isShow)
+    {
+        //terrainMaterial.SetFloat("_ShowMapData", isShow ? 1f : 0f);
+
+        if (isShow)
+        {
+            terrainMaterial.EnableKeyword("SHOW_MAP_DATA");
+        }
+        else
+        {
+            terrainMaterial.DisableKeyword("SHOW_MAP_DATA");
+        }
+    }
+
+
+
+
+    ///////////////////////边界线//////////////////////////////
+    
+
+    public void RefreshBoundary()
+    {
+        // 清楚渲染
+        boundary.Clear();
+
+        // 渲染所有六边形
+        for (int i = 0; i < cells.Length; i++)
+        {
+            // 渲染某个六边形
+            boundarySide(cells[i]);
+        }
+
+        boundary.Apply();
+    }
+
+
+    void boundarySide(HexCell cell)
+    {
+        for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+        {
+            boundarySide(d, cell);
+        }
+    }
+
+    // 渲染某个方向的边
+    void boundarySide(HexDirection direction, HexCell cell)
+    {
+        float width = 0f;
+        if(cell.IsCityBoundary(direction, out width))
+        {
+            HexCell nei = cell.GetNeighbor(direction);
+
+            Debug.Log("IsCityBoundary"+ width);
+
+            Vector3 center = cell.GetBoundaryCenterPos();
+
+            EdgeVertices e = new EdgeVertices(
+                center + HexMetrics.GetFirstSolidCorner(direction),
+                center + HexMetrics.GetSecondSolidCorner(direction)
+            );
+
+            Vector3 bridge = HexMetrics.GetBridge(direction);
+
+            EdgeVertices nei_e = new EdgeVertices(
+                e.v1 + bridge,
+                e.v5 + bridge
+            );
+            if (nei != null)
+            {
+                Vector3 nei_center = nei.GetBoundaryCenterPos();
+
+                nei_e = new EdgeVertices(
+                    nei_center + HexMetrics.GetSecondSolidCorner(direction.Opposite()),
+                    nei_center + HexMetrics.GetFirstSolidCorner(direction.Opposite())
+                );
+            }
+
+            EdgeVertices boundary_line = new EdgeVertices(
+                    Vector3.Lerp(e.v1, nei_e.v1, 0.5f),
+                    Vector3.Lerp(e.v5, nei_e.v5, 0.5f)
+                );
+
+            EdgeVertices insit_boundary_line = new EdgeVertices(
+                    Vector3.Lerp(boundary_line.v1, e.v1, width),
+                    Vector3.Lerp(boundary_line.v5, e.v5, width)
+                );
+
+            boundary.AddQuad(insit_boundary_line.v1, insit_boundary_line.v5,
+                boundary_line.v1, boundary_line.v5);
+
+            Vector3 indices = new Vector3(cell.index, cell.index, cell.index);
+            boundary.AddQuadCellData(indices, weights1);
+
+            boundaryTriangulate(direction, cell, width, true);
+
+            // 如果上一边不是边界
+            float preWidth;
+            if (!cell.IsCityBoundary(direction.Previous(), out preWidth))
+            {
+                boundaryTriangulate(direction.Previous(), cell, width, false);
+            }
+        }
+    }
+
+
+    void boundaryTriangulate(HexDirection direction, HexCell cell, float width, bool isbound)
+    {
+        Vector3 v1, v2, v3, v4;
+        boundaryRightPoint(cell, direction, width, out v1, out v2);
+
+        Vector3 indices = new Vector3(cell.index, cell.index, cell.index);
+
+        float nextWidth;
+        if(isbound && cell.IsCityBoundary(direction.Next(), out nextWidth))
+        {
+            boundaryLeftPoint(cell, direction.Next(), nextWidth, out v3, out v4);
+
+            boundary.AddQuad(v1, v3, v2, v4);
+            boundary.AddQuadCellData(indices, weights1);
+        }
+        else
+        {
+            Vector3 v5, v6;
+
+            Vector3 center = cell.GetBoundaryCenterPos();
+
+            HexCell nei = cell.GetNeighbor(direction);
+            nei = nei == null ? cell : nei;
+            Vector3 neiCenter = nei.GetBoundaryCenterPos();
+
+            HexCell nextNei = cell.GetNeighbor(direction.Next());
+            nextNei = nextNei == null ? cell : nextNei;
+            Vector3 nextNeiCenter = nextNei.GetBoundaryCenterPos();
+
+            v6 = center + HexMetrics.GetSecondCorner(direction);
+            v6.y = (center.y + neiCenter.y + nextNeiCenter.y) / 3;
+
+            Vector3 v = center + HexMetrics.GetSecondSolidCorner(direction);
+            v5 = Vector3.Lerp(v6, v, width);
+
+            boundary.AddQuad(v1, v5, v2, v6);
+            boundary.AddQuadCellData(indices, weights1);
+
+            boundaryLeftPoint(cell, direction.Next(), width, out v3, out v4);
+
+            boundary.AddQuad(v5, v3, v6, v4);
+            boundary.AddQuadCellData(indices, weights1);
+        }
+    }
+
+    void boundaryRightPoint(HexCell cell, HexDirection dir, float width, out Vector3 v1, out Vector3 v2)
+    {
+        Vector3 center = cell.GetBoundaryCenterPos();
+
+        Vector3 v = center + HexMetrics.GetSecondSolidCorner(dir);
+
+        HexCell nei = cell.GetNeighbor(dir);
+
+        Vector3 _v;
+        if (nei != null)
+        {
+            Vector3 nei_center = nei.GetBoundaryCenterPos();
+            _v = nei_center + HexMetrics.GetFirstSolidCorner(dir.Opposite());
+        }
+        else
+        {
+            _v = v + HexMetrics.GetBridge(dir);
+        }
+
+        v2 = Vector3.Lerp(v, _v, 0.5f);
+        v1 = Vector3.Lerp(v2, v, width);
+    }
+
+    void boundaryLeftPoint(HexCell cell, HexDirection dir, float width, out Vector3 v1, out Vector3 v2)
+    {
+        Vector3 center = cell.GetBoundaryCenterPos();
+
+        Vector3 v = center + HexMetrics.GetFirstSolidCorner(dir);
+
+        HexCell nei = cell.GetNeighbor(dir);
+
+        Vector3 _v;
+        if (nei != null)
+        {
+            Vector3 nei_center = nei.GetBoundaryCenterPos();
+            _v = nei_center + HexMetrics.GetSecondSolidCorner(dir.Opposite());
+        }
+        else
+        {
+            _v = v + HexMetrics.GetBridge(dir);
+        }
+
+        v2 = Vector3.Lerp(v, _v, 0.5f);
+        v1 = Vector3.Lerp(v2, v, width);
     }
 }

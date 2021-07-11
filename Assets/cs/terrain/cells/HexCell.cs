@@ -4,21 +4,17 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.IO;
 
-public enum RiverDirection
-{
-    Null,
-    Incoming,
-    Outgoing
-}
-
 // 一个六边形 类
-public class HexCell : MonoBehaviour
+public class HexCell : MonoBehaviour, SaveLoadInterface, RoundObject
 {
     public int index;
     public int chunkIndex;
+    public int ColumnIndex { get; set; }
 
     // 坐标
     public HexCoordinates coordinates;
+
+    public HexVector Vector;
 
     // 高度层级
     int elevation = int.MinValue;
@@ -34,23 +30,25 @@ public class HexCell : MonoBehaviour
             {
                 return;
             }
-            //value = 1;
+            int originalViewElevation = ViewElevation;
+            
             int old_elevation = elevation;
             elevation = value;
-            //elevation = 1;
+
+            if (ViewElevation != originalViewElevation)
+            {
+                ShaderData.ViewElevationChanged();
+            }
 
             // 修改垂直坐标
             RefreshPosition();
             
-            if (HexMetrics.elevationHierarchy[elevation] <= HexMetrics.coastline)
+            for (int i = 0; i < roads.Length; i++)
             {
-                //Debug.Log("++++++++++++");
-                terrainType = HexTerrainType.Water;
-                LakesLevel = elevation + 1;
-            }
-            else
-            {
-                //terrainType = HexTerrainType.Land;
+                if (roads[i] && GetElevationDifference((HexDirection)i) > 1)
+                {
+                    SetRoad(i, false);
+                }
             }
 
             // 并非初始赋值时
@@ -98,6 +96,10 @@ public class HexCell : MonoBehaviour
         }
     }
 
+    public HexFeatureType FeatureType = HexFeatureType.NULL;
+    public int FeatureLevel = 0;
+    public List<GameObject> FeaturePos = null;
+
     // 建筑物
     MapBuild build = null;
     public MapBuild Build
@@ -113,56 +115,33 @@ public class HexCell : MonoBehaviour
     }
 
     // 属于的城市地块
-    public City city;
+    City _city;
+    public City city
+    {
+        get
+        {
+            return _city;
+        }
+        set
+        {
+            _city = value;
+
+            if(_city != null)
+            {
+                ShaderData.UpdateCellCampData(this, _city.camp.GetId());
+            }
+        }
+    }
 
     // 人物
     public PersonControl Person { get; set; }
 
+    public Troop Troop { get; set; }
+
     public HexGridChunk chunk;
-
-    // 降雨量
-    public int rain = 0;
-    public int Rain
-    {
-        get
-        {
-            return rain;
-        }
-        set
-        {
-            float addRain = value;
-            rain = rain + value;
-
-            pondage = pondage + value;
-
-            foreach (HexCell cell in neighbors)
-            {
-                if(cell)
-                {
-                    cell.rain += (int)(addRain * 0.3f);
-                    cell.pondage += (int)(addRain * 0.3f);
-                }
-            }
-
-            
-        }
-    }
-
-    // 蓄水量
-    public int pondage = 0;
-    public int Pondage
-    {
-        get
-        {
-            return pondage;
-        }
-        set
-        {
-            pondage = value;
-        }
-    }
     
-    // 湖泊高度
+
+    // 湖泊高度 / 水面高度
     int lakesLevel;
     public int LakesLevel
     {
@@ -176,8 +155,13 @@ public class HexCell : MonoBehaviour
             {
                 return;
             }
+            int originalViewElevation = ViewElevation;
             lakesLevel = value;
-            Refresh();
+            if (ViewElevation != originalViewElevation)
+            {
+                ShaderData.ViewElevationChanged();
+            }
+            // Refresh();
         }
     }
 
@@ -201,6 +185,10 @@ public class HexCell : MonoBehaviour
     // 河流
     RiverDirection[] rivers;
 
+    // 道路
+    [SerializeField]
+    bool[] roads;
+
     /// <summary>
     /// 距离
     /// </summary>
@@ -214,6 +202,26 @@ public class HexCell : MonoBehaviour
         set
         {
             distance = value;
+        }
+    }
+
+    [SerializeField]
+    int walls;
+
+    // 是否可被探索，用于地图边缘
+    public bool Explorable { get; set; }
+
+    bool explored;
+
+    // 是否已被探索
+    public bool IsExplored {
+        get
+        {
+            return explored && Explorable;
+        }
+        private set
+        {
+            explored = value;
         }
     }
 
@@ -239,20 +247,42 @@ public class HexCell : MonoBehaviour
 
     public HexCellShaderData ShaderData { get; set; }
 
+    // 是否亮
     public bool IsVisible
     {
         get
         {
-            return visibility > 0;
+            return visibility > 0 && Explorable;
         }
     }
     int visibility;
+    
+
+    // 视角高度，
+    public int ViewElevation
+    {
+        get
+        {
+            return elevation >= lakesLevel ? elevation : lakesLevel;
+        }
+    }
+
+    public bool IsUnderwater
+    {
+        get
+        {
+            return lakesLevel > elevation;
+        }
+    }
 
     public void Awake()
     {
         rivers = new RiverDirection[HexMetrics.HexTrianglesNum];
 
+        roads = new bool[HexMetrics.HexTrianglesNum];
         //DisableHighlight();
+
+        walls = 0;
     }
 
     public void Start()
@@ -263,37 +293,57 @@ public class HexCell : MonoBehaviour
     public void Save(BinaryWriter writer)
     {
         writer.Write((byte)terrainType);
-        writer.Write((byte)elevation);
+        writer.Write(elevation);
         writer.Write((byte)height);
-        writer.Write((byte)rain);
-        writer.Write((byte)pondage);
         writer.Write((byte)lakesLevel);
         writer.Write(store);
+        writer.Write(explored);
+        writer.Write((byte)FeatureType);
+        writer.Write((byte)FeatureLevel);
+
 
         for (int i = 0; i < rivers.Length; i++)
         {
             writer.Write((byte)rivers[i]);
         }
 
+        for (int i = 0; i < roads.Length; i++)
+        {
+            writer.Write(roads[i]);
+        }
+
+        writer.Write(walls);
+        
+
         //MapBuildFactory.Save(build, writer);
     }
 
-    public void Load(BinaryReader reader)
+    public IEnumerator Load(BinaryReader reader)
     {
         terrainType = (HexTerrainType)reader.ReadByte();
-        elevation = reader.ReadByte();
+        elevation = reader.ReadInt32();
         RefreshPosition();
         height = reader.ReadByte();
-        rain = reader.ReadByte();
-        pondage = reader.ReadByte();
         lakesLevel = reader.ReadByte();
         store = reader.ReadInt32();
+        explored = reader.ReadBoolean();
+        FeatureType = (HexFeatureType)reader.ReadByte();
+        FeatureLevel = reader.ReadByte();
+
 
         for (int i = 0; i < rivers.Length; i++)
         {
             rivers[i] = (RiverDirection)reader.ReadByte();
         }
 
+        for (int i = 0; i < roads.Length; i++)
+        {
+            roads[i] = reader.ReadBoolean();
+        }
+
+        walls = reader.ReadInt32();
+
+        yield return null;
         //build = MapBuildFactory.Load(reader);
     }
 
@@ -402,7 +452,7 @@ public class HexCell : MonoBehaviour
     }
 
     // 待修改， 只需要更新周围的 6格就好了
-    void Refresh()
+    public void Refresh()
     {
         if (chunk)
         {
@@ -418,7 +468,7 @@ public class HexCell : MonoBehaviour
     }
 
     // 
-    void RefreshOnlySelf()
+    public void RefreshOnlySelf()
     {
         chunk.Refresh( this );
         if (Person)
@@ -427,18 +477,21 @@ public class HexCell : MonoBehaviour
         }
     }
 
-
-
-
+    
 
     /**
      *   河流
      * 
      * 
      */
-     
+
+    public void RemoveRiver()
+    {
+        rivers = new RiverDirection[HexMetrics.HexTrianglesNum];
+    }
+
     // 增加一条流出的河流
-    public void SetOutgoingRiver(HexDirection direction, float flow)
+    public void SetOutgoingRiver(HexDirection direction, float flow = 100)
     {
         
         HexCell neighbor = GetNeighbor(direction);
@@ -449,10 +502,12 @@ public class HexCell : MonoBehaviour
         {
             neighbor.SetIncomingRiver(HexDirectionExtensions.Opposite(direction), flow);
         }
-    }
 
+        SetRoad((int)direction, false);
+    }
+ 
     // 增加一条流入的河流
-    public void SetIncomingRiver(HexDirection direction, float flow)
+    public void SetIncomingRiver(HexDirection direction, float flow = 100)
     {
         // 设置流入河流
         rivers[(int)direction] = RiverDirection.Incoming;
@@ -489,16 +544,14 @@ public class HexCell : MonoBehaviour
         for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
         {
             RiverDirection river = GetRiverDirection(dir);
-            if (river != RiverDirection.Null)
+            
+            if (river == RiverDirection.Incoming)
             {
-                if (river == RiverDirection.Incoming)
-                {
-                    hasIn = true;
-                }
-                else if (river == RiverDirection.Outgoing)
-                {
-                    hasOut = true;
-                }
+                hasIn = true;
+            }
+            else if (river == RiverDirection.Outgoing)
+            {
+                hasOut = true;
             }
 
             if (hasIn && hasOut)
@@ -510,6 +563,44 @@ public class HexCell : MonoBehaviour
         if (!hasIn && !hasOut)
         {
             return false;
+        }
+
+        return true;
+    }
+
+    public HexDirection RiverBeginOrEndDirection()
+    {
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
+        {
+            RiverDirection river = GetRiverDirection(dir);
+            if (river != RiverDirection.Null)
+            {
+                return dir;
+            }
+        }
+
+        return HexDirection.NE;
+    }
+
+
+    public bool IsRiverOrigin()
+    {
+        int num = 0;
+        for (HexDirection dir = HexDirection.NE; dir <= HexDirection.NW; dir++)
+        {
+            RiverDirection river = GetRiverDirection(dir);
+            if (river != RiverDirection.Outgoing)
+            {
+                return false;
+            }
+            if(river != RiverDirection.Null)
+            {
+                num++;
+                if(num > 1)
+                {
+                    return false;
+                }
+            }
         }
 
         return true;
@@ -621,7 +712,7 @@ public class HexCell : MonoBehaviour
 
     public bool IsLakes()
     {
-        return terrainType == HexTerrainType.Water;
+        return IsUnderwater; //  terrainType == HexTerrainType.Water;
     }
 
     bool IsValidRiverDestination(HexCell neighbor)
@@ -631,6 +722,77 @@ public class HexCell : MonoBehaviour
         );
     }
 
+
+    /***
+     * 
+     * 
+     *  道路
+     * 
+     * 
+     */
+
+
+    // 判断是否有路
+    public bool HasRoadThroughEdge(HexDirection direction)
+    {
+        return roads[(int)direction];
+    }
+
+    public bool HasRoads
+    {
+        get
+        {
+            for (int i = 0; i < roads.Length; i++)
+            {
+                if (roads[i])
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    
+
+    public void AddRoad(HexDirection direction)
+    {
+        // 没有路， 不是河流，且不是悬崖
+        if (!roads[(int)direction] && !HasRiverThroughEdge(direction) &&
+            GetElevationDifference(direction) <= 1)
+        {
+            SetRoad((int)direction, true);
+        }
+    }
+
+    public void RemoveRoads()
+    {
+        for (int i = 0; i < neighbors.Length; i++)
+        {
+            if (roads[i])
+            {
+                SetRoad(i, false);
+            }
+        }
+    }
+
+    void SetRoad(int index, bool state)
+    {
+        roads[index] = state;
+        neighbors[index].roads[(int)((HexDirection)index).Opposite()] = state;
+
+        // neighbors[index].RefreshOnlySelf();
+        // RefreshOnlySelf();
+    }
+
+
+
+    // 获取高度差
+    public int GetElevationDifference(HexDirection direction)
+    {
+        int difference = elevation - GetNeighbor(direction).elevation;
+        return difference >= 0 ? difference : -difference;
+    }
 
 
     /// <summary>
@@ -646,6 +808,9 @@ public class HexCell : MonoBehaviour
             case BuildType.City:
                 res = CanBuildCity();
                 break;
+            case BuildType.Farm:
+                res = CanBuildFarm();
+                break;
         }
 
         return res;
@@ -653,7 +818,7 @@ public class HexCell : MonoBehaviour
 
     bool CanBuildCity()
     {
-        if(TerrainType == HexTerrainType.Water || TerrainType == HexTerrainType.Ridge)
+        if(IsUnderwater || TerrainType == HexTerrainType.Ridge)
         {
             return false;
         }
@@ -675,20 +840,61 @@ public class HexCell : MonoBehaviour
         return true;
     }
 
+    bool CanBuildFarm()
+    {
+        if (IsUnderwater || TerrainType == HexTerrainType.Ridge)
+        {
+            Debug.Log("11111111111111");
+            return false;
+        }
+
+        if ( build != null)
+        {
+            Debug.Log("222222222222");
+            return false;
+        }
+
+        // 不能在冰和沙漠上建造
+        if(terrainType == HexTerrainType.Snow || terrainType == HexTerrainType.Desert)
+        {
+            Debug.Log("333333333333");
+            return false;
+        }
+
+        return true;
+    }
+
+    LinkedList<Color> highLightColors = new LinkedList<Color>();
+
     /// <summary>
-    /// 是否高亮
+    /// 关闭高亮
     /// </summary>
     public void DisableHighlight()
     {
+        if(highLightColors.Count > 0)
+        {
+            highLightColors.RemoveLast();
+        }
+
         Image highlight = uiRect.GetChild(0).GetComponent<Image>();
-        highlight.enabled = false;
+        if (highLightColors.Count > 0)
+        {
+            highlight.color = highLightColors.Last.Value;
+            highlight.enabled = true;
+        }
+        else
+        {
+            highlight.enabled = false;
+        }
     }
 
     /// <summary>
-    /// 是否高亮
+    /// 打开高亮
     /// </summary>
     public void EnableHighlight(Color color)
     {
+        highLightColors.AddLast(color);
+
         Image highlight = uiRect.GetChild(0).GetComponent<Image>();
         highlight.color = color;
         highlight.enabled = true;
@@ -699,14 +905,29 @@ public class HexCell : MonoBehaviour
         UnityEngine.UI.Text label = uiRect.GetComponent<Text>();
         label.text = text;
     }
-    
+
+    public void SetLabelDir(float angle)
+    {
+        UnityEngine.UI.Text label = uiRect.GetComponent<Text>();
+        //label.text = "个";
+
+        label.rectTransform.localEulerAngles = new Vector3(0, 0, angle);
+
+        //label.rectTransform.Rotate(new Vector3(0, 0, angle));
+    }
 
     public int GetDistanceCost(HexCell neighbor)
     {
         HexEdgeType edgeType = GetEdgeType(neighbor);
         if (edgeType == HexEdgeType.Cliff)
         {
-            return int.MaxValue;
+            return -1;
+        }
+
+        // 不能入海
+        if (neighbor.IsUnderwater)
+        {
+            return -1;
         }
 
         int moveCost = 0;
@@ -724,11 +945,13 @@ public class HexCell : MonoBehaviour
         return moveCost;
     }
 
+    // 判断地块显示还是暗
     public void IncreaseVisibility()
     {
         visibility += 1;
         if (visibility == 1)
         {
+            IsExplored = true;
             ShaderData.RefreshVisibility(this);
         }
 
@@ -742,5 +965,112 @@ public class HexCell : MonoBehaviour
             ShaderData.RefreshVisibility(this);
         }
 
+    }
+
+    public void ResetVisibility()
+    {
+        if (visibility > 0)
+        {
+            visibility = 0;
+            ShaderData.RefreshVisibility(this);
+        }
+    }
+
+
+    public bool HasWall(HexDirection dir)
+    {
+        int i = (int)dir;
+        short b = (short)Mathf.Pow(2, i);
+        
+        return (walls & b) != 0;
+    }
+
+    public void SetWalls(bool[] v)
+    {
+        walls = 0;
+        for (int i = 0; i < v.Length; i++)
+        {
+            walls = walls << 1;
+            if (v[i] == true)
+            {
+                walls = walls | 1;
+            }
+        }
+
+        Debug.Log(walls);
+    }
+
+
+    public void SetMapData(float data)
+    {
+        ShaderData.SetMapData(this, data);
+    }
+
+
+
+    // 地面变化
+    public void NextRound()
+    {
+        // 其上的建筑变化
+        if(build != null)
+        {
+            switch (build.BuildType)
+            {
+                case BuildType.City:
+                    ((City)build).NextRound();
+                    break;
+                case BuildType.Farm:
+                    ((Farm)build).NextRound();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    public void LaterNextRound()
+    {
+       
+    }
+
+
+    public Vector3 GetBoundaryCenterPos()
+    {
+        if (IsUnderwater)
+        {
+            Vector3 v = transform.localPosition;
+            v.y = LakesSurfaceY;
+            return v;
+        }
+        else
+        {
+            return transform.localPosition;
+        }
+    }
+
+    public bool IsCityBoundary(HexDirection dir, out float width)
+    {
+        HexCell nei = GetNeighbor(dir);
+
+        if(city != null)
+        {
+            // 不属于同一个城市
+            if(nei == null || city != nei.city)
+            {
+                width = 1f;
+
+                // 属于同一个阵营
+                if (nei != null && nei.city != null
+                    && nei.city.camp.GetId() == city.camp.GetId())
+                {
+                    width = width / 2;
+                }
+
+                return true;
+            }
+        }
+
+        width = 0;
+        return false;
     }
 }

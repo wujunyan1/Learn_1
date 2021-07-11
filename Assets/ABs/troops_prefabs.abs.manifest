@@ -1,0 +1,61 @@
+ManifestFileVersion: 0
+CRC: 1471235758
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: d6dd4c2ec739d3892b8d37499df55b75
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 9cd554eceffc94e7b83c934f41bf0aa6
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 65
+  Script: {instanceID: 0}
+- Class: 74
+  Script: {instanceID: 0}
+- Class: 90
+  Script: {instanceID: 0}
+- Class: 91
+  Script: {instanceID: 0}
+- Class: 95
+  Script: {instanceID: 0}
+- Class: 137
+  Script: {instanceID: 0}
+Assets:
+- Assets/Resources/prefabs/BigBattle/Person/WK_light_cavalry_B.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_mage_B.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_spearman_B.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_mounted_priest.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_heavy_infantry_A.prefab
+- Assets/Resources/prefabs/BigBattle/Person/Hero.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_light_archer_B.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_heavy_cavalry.prefab
+- Assets/Resources/prefabs/BigBattle/Person/Creater.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_mounted_mage.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_mage_A.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_heavy_infantry_B.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_light_infantry_B.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_worker.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_spearman_A.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_light_infantry_A.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_Catapult.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_light_cavalry.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_priest.prefab
+- Assets/Resources/prefabs/BigBattle/Person/WK_light_archer_A.prefab
+Dependencies: []

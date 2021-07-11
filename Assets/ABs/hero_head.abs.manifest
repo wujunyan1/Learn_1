@@ -1,0 +1,67 @@
+ManifestFileVersion: 0
+CRC: 2217002276
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 8247644111daa72d2f91b6ca468b4982
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: cb3f6df5cbc4a2990c44c2787bc9553a
+HashAppended: 0
+ClassTypes:
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 213
+  Script: {instanceID: 0}
+Assets:
+- "Assets/Res/heroHead/\u8BB8\u891A.bmp"
+- "Assets/Res/heroHead/\u5468\u745C.bmp"
+- "Assets/Res/heroHead/\u5173\u7FBD.bmp"
+- "Assets/Res/heroHead/\u5178\u97E6.bmp"
+- "Assets/Res/heroHead/\u5468\u6CF0.bmp"
+- "Assets/Res/heroHead/\u9EC4\u6708\u82F1.bmp"
+- "Assets/Res/heroHead/\u5F20\u8FBD.bmp"
+- "Assets/Res/heroHead/\u9EC4\u5FE0.bmp"
+- "Assets/Res/heroHead/\u795D\u878D\u592B\u4EBA.bmp"
+- "Assets/Res/heroHead/\u590F\u4FAF\u9738.bmp"
+- "Assets/Res/heroHead/\u6587\u4E11.bmp"
+- "Assets/Res/heroHead/\u5F20\u90C3.bmp"
+- "Assets/Res/heroHead/\u5B5F\u83B7.bmp"
+- "Assets/Res/heroHead/\u5415\u8499.bmp"
+- "Assets/Res/heroHead/\u9A6C\u5C0F\u59B9.bmp"
+- "Assets/Res/heroHead/\u5E9E\u7EDF.bmp"
+- "Assets/Res/heroHead/\u4E8E\u7981.bmp"
+- "Assets/Res/heroHead/\u5F20\u98DE.bmp"
+- "Assets/Res/heroHead/\u5F90\u5EB6.bmp"
+- "Assets/Res/heroHead/\u9A6C\u8D85.bmp"
+- "Assets/Res/heroHead/\u5F90\u6643.bmp"
+- "Assets/Res/heroHead/\u51CC\u7EDF.bmp"
+- "Assets/Res/heroHead/\u9646\u900A.bmp"
+- "Assets/Res/heroHead/\u5927\u4E54.bmp"
+- "Assets/Res/heroHead/\u5415\u59B9\u5B50.bmp"
+- "Assets/Res/heroHead/\u9C81\u8083.bmp"
+- "Assets/Res/heroHead/\u9EC4\u76D6.bmp"
+- "Assets/Res/heroHead/\u5415\u5E03.bmp"
+- "Assets/Res/heroHead/\u7504\u6C0F.bmp"
+- "Assets/Res/heroHead/\u592A\u53F2\u6148.bmp"
+- "Assets/Res/heroHead/\u5F13\u8170\u59EC.bmp"
+- "Assets/Res/heroHead/\u53F8\u9A6C\u61FF.bmp"
+- "Assets/Res/heroHead/\u8340\u6538.bmp"
+- "Assets/Res/heroHead/\u90ED\u5609.bmp"
+- "Assets/Res/heroHead/\u989C\u826F.bmp"
+- "Assets/Res/heroHead/\u8521\u6587\u59EC.bmp"
+- "Assets/Res/heroHead/\u9093\u827E.bmp"
+- "Assets/Res/heroHead/\u534E\u96C4.bmp"
+- "Assets/Res/heroHead/\u8C82\u8749.bmp"
+- "Assets/Res/heroHead/\u8D3E\u8BE9.bmp"
+- "Assets/Res/heroHead/\u9B4F\u5EF6.bmp"
+- "Assets/Res/heroHead/\u5E9E\u5FB7.bmp"
+- "Assets/Res/heroHead/\u5B54\u660E.bmp"
+- "Assets/Res/heroHead/\u66F9\u4EC1.bmp"
+- "Assets/Res/heroHead/\u5B59\u7B56.bmp"
+- "Assets/Res/heroHead/\u59DC\u7EF4.bmp"
+- "Assets/Res/heroHead/\u8D75\u4E91.bmp"
+- "Assets/Res/heroHead/\u7518\u5B81.bmp"
+- "Assets/Res/heroHead/\u590F\u4FAF\u60C7.bmp"
+- "Assets/Res/heroHead/\u590F\u4FAF\u6E0A.bmp"
+Dependencies: []

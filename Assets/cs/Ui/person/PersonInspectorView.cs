@@ -34,27 +34,27 @@ public class PersonInspectorView : View
         header.gameObject.SetActive(true);
     }
 
-    public override void Open()
+    public override void Open(UObject o)
     {
         this.gameObject.SetActive(true);
         this.transform.parent.gameObject.SetActive(true);
 
-        HexMapEditor.instance.SetDefaultTouchAction(CloseAction);
+        // HexMapEditor.instance.SetDefaultTouchAction(CloseAction);
 
         UpdateView();
     }
 
     public override void Close()
     {
-        if (Choosefunc)
+        if (Choosefunc != null)
         {
-            Choosefunc.CloseFuncView();
+            //Choosefunc.CloseFuncView();
             Choosefunc = null;
         }
 
         HidePersonPath();
 
-        HexMapEditor.instance.SetDefaultTouchAction(null);
+        // HexMapEditor.instance.SetDefaultTouchAction(null);
 
         this.gameObject.SetActive(false);
         this.transform.parent.gameObject.SetActive(false);
@@ -134,7 +134,7 @@ public class PersonInspectorView : View
     public void TouchFunc(ObjFunction func)
     {
         Choosefunc = func;
-        func.OnStartBtn();
+        //func.OnStartBtn();
     }
 
 

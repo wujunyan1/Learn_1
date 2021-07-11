@@ -1,0 +1,99 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class BattleGroupView : EventComponent
+{
+    public RectTransform leftBattleGroup;
+    public RectTransform leftSelectGroup;
+
+    public RectTransform rightBattleGroup;
+    public RectTransform rightSelectGroup;
+
+    BattleDataManager battleDataManager;
+
+    // Start is called before the first frame update
+    /// <summary>
+    /// 开始加载人物配置
+    /// </summary>
+    void Start()
+    {
+        if (HeroConfig.GetInstance().IsLoadSoldierConfig)
+        {
+            InitData();
+        }
+        else
+        {
+            StartCoroutine(LoadRes());
+        }
+    }
+
+    private IEnumerator LoadRes()
+    {
+        yield return null;
+
+        HeroConfig data = HeroConfig.GetInstance();
+        yield return null;
+
+        //加载英雄的 配置文件
+        data.LoadSoldierConfig();
+        yield return null;
+
+        InitData();
+    }
+
+    
+    void InitData()
+    {
+        InitBattleData();
+        UpdateView();
+    }
+
+    /// <summary>
+    /// 初始化
+    /// </summary>
+    void InitBattleData()
+    {
+        //2个阵容
+        battleDataManager = new BattleDataManager(2);
+    }
+
+    private void UpdateView()
+    {
+        UpdateLeftBattleGroup();
+        UpdateLeftSelectGroup();
+
+        UpdateRightBattleGroup();
+        UpdateRightSelectGroup();
+    }
+
+    private void UpdateLeftBattleGroup()
+    {
+
+    }
+
+    private void UpdateLeftSelectGroup()
+    {
+
+    }
+
+    private void UpdateRightBattleGroup()
+    {
+
+    }
+
+    private void UpdateRightSelectGroup()
+    {
+
+    }
+
+
+    /// <summary>
+    /// 点击开战
+    /// </summary>
+    public void OnClickStartBattle()
+    {
+        
+    }
+}

@@ -7,10 +7,6 @@ using UnityEngine;
 /// </summary>
 public class FunctionGenerate : MonoBehaviour
 {
-    /// <summary>
-    /// 移动组件
-    /// </summary>
-    public MoveFunction moveFunction;
 
 
 }

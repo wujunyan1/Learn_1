@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2488636277294718233}
   - component: {fileID: 5599256353854106788}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Cell
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -57,7 +57,7 @@ MonoBehaviour:
   - {fileID: 0}
   uiRect: {fileID: 0}
   label: {fileID: 0}
-  person: {fileID: 0}
+  city: {fileID: 0}
   chunk: {fileID: 0}
   rain: 0
   pondage: 0

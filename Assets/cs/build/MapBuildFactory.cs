@@ -10,7 +10,7 @@ public class MapBuildFactory : MonoBehaviour
         if(build != null)
         {
             writer.Write(true);
-            build.Save(writer);
+            //build.Save(writer);
         }
         else
         {
@@ -29,11 +29,27 @@ public class MapBuildFactory : MonoBehaviour
             switch (type)
             {
                 case BuildType.City:
-                    build = new City();
-                    build.Load(reader);
                     break;
             }
         }
+
+        return build;
+    }
+
+    public static MapBuild CreateMapBuild(BuildType type)
+    {
+        MapBuild build = null;
+        switch (type)
+        {
+            case BuildType.City:
+                build = GameCenter.instance.GenerateNewCity();
+                break;
+            case BuildType.Farm:
+                build = GameCenter.instance.GenerateNewFarm();
+                break;
+        }
+
+        //build.SetPoint(cell.coordinates.X, cell.coordinates.Z);
 
         return build;
     }
@@ -44,11 +60,10 @@ public class MapBuildFactory : MonoBehaviour
         switch (type)
         {
             case BuildType.City:
-                build = CreateCity(cell);
                 break;
         }
 
-        build.SetPoint(cell.coordinates.X, cell.coordinates.Z);
+        //build.SetPoint(cell.coordinates.X, cell.coordinates.Z);
 
         cell.Build = build;
     }
@@ -56,7 +71,7 @@ public class MapBuildFactory : MonoBehaviour
     static City CreateCity(HexCell cell)
     {
         City city = new City();
-        city.BuildNewCity(cell.coordinates);
+        //city.BuildNewCity(cell.coordinates);
         return city;
     }
 }

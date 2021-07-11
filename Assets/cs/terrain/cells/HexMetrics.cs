@@ -5,15 +5,35 @@ using UnityEngine;
 // 连接地形
 public enum HexEdgeType
 {
-    Flat, Slope, Cliff
+    /// <summary>
+    /// 平原
+    /// </summary>
+    Flat,
+
+    /// <summary>
+    /// 坡道
+    /// </summary>
+    Slope,
+
+    /// <summary>
+    /// 悬崖
+    /// </summary>
+    Cliff
 }
 
-// 六边形 数据
-public class HexMetrics : MonoBehaviour
+/**
+    /T\
+    \_/
+*/
+// 六边形 数据  
+public class HexMetrics
 {
     public const float outerRadius = 10f;
 
     public const float innerRadius = outerRadius * 0.866025404f;
+
+    // 一个格子的宽度
+    public const float innerDiameter = innerRadius * 2f;
 
     // 小六边形占比
     public const float solidFactor = 0.75f;
@@ -22,6 +42,36 @@ public class HexMetrics : MonoBehaviour
 
     // 每个阶层的差值
     public const float elevationStep = 5f;
+
+    // 每层的高度
+    public const float cellHeight = 5f;
+
+    // 墙的高度
+    public const float wallHeight = 3f;
+
+    // 墙的厚度
+    public const float wallThickness = 0.75f;
+
+    public static Vector3 WallThicknessOffset(Vector3 near, Vector3 far)
+    {
+        Vector3 offset;
+        offset.x = far.x - near.x;
+        offset.y = 0f;
+        offset.z = far.z - near.z;
+        return offset.normalized * (wallThickness * 0.5f);
+    }
+
+    public const float wallElevationOffset = verticalTerraceStepSize;
+
+    public static Vector3 WallLerp(Vector3 near, Vector3 far)
+    {
+        near.x += (far.x - near.x) * 0.5f;
+        near.z += (far.z - near.z) * 0.5f;
+        float v =
+            near.y < far.y ? wallElevationOffset : (1f - wallElevationOffset);
+        near.y += (far.y - near.y) * v;
+        return near;
+    }
 
     // 画一个六边形所需的三角数量
     public const int HexTrianglesNum = 6;
@@ -70,6 +120,11 @@ public class HexMetrics : MonoBehaviour
     public static Vector3 GetSolidCorner(HexDirection direction)
     {
         return (corners[(int)direction] + corners[(int)direction + 1]) * solidFactor / 2;
+    }
+
+    public static Vector3 GetSolidEdgeMiddle(HexDirection direction)
+    {
+        return (corners[(int)direction] + corners[(int)direction + 1]) / 2;
     }
 
     public static Vector3 GetBridge(HexDirection direction)
@@ -214,18 +269,33 @@ public class HexMetrics : MonoBehaviour
 
     public static Vector4 SampleNoise(Vector3 position)
     {
-        return noiseSource.GetPixelBilinear(
+        Vector4 sample = noiseSource.GetPixelBilinear(
             position.x * noiseScale,
             position.z * noiseScale
         );
+
+        if (Wrapping && position.x < innerDiameter * 1.5f)
+        {
+            Vector4 sample2 = noiseSource.GetPixelBilinear(
+                (position.x + wrapSize * innerDiameter) * noiseScale,
+                position.z * noiseScale
+            );
+            sample = Vector4.Lerp(
+                sample2, sample, position.x * (1f / innerDiameter) - 0.5f
+            );
+        }
+
+        return sample;
     }
 
     public static Vector3 Perturb(Vector3 position)
     {
-        Vector4 sample = SampleNoise(position);
-        position.x += (sample.x * 2f - 1f) * cellPerturbStrength;
-        position.z += (sample.z * 2f - 1f) * cellPerturbStrength;
         return position;
+
+        //Vector4 sample = SampleNoise(position);
+        //position.x += (sample.x * 2f - 1f) * cellPerturbStrength;
+        //position.z += (sample.z * 2f - 1f) * cellPerturbStrength;
+        //return position;
     }
 
     // 在三角区域内，按密度随机生成N个点
@@ -268,6 +338,18 @@ public class HexMetrics : MonoBehaviour
 
     public const int InitialCellResourceNum = 100;
 
-    public static int HexDirectionNum = 6;
+    public const int HexDirectionNum = 6;
+
+
+    // 循环宽度
+    public static int wrapSize;
+
+    public static bool Wrapping
+    {
+        get
+        {
+            return wrapSize > 0;
+        }
+    }
 }
 

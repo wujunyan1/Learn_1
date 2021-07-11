@@ -5,17 +5,10 @@ using UnityEngine;
 public enum HexTerrainType
 {
     /// <summary>
-    /// 水
-    /// </summary>
-    Water,              // 水
-    /// <summary>
     /// 草地
     /// </summary>
     Grassplot,          // 草地
-    /// <summary>
-    /// 树林
-    /// </summary>
-    Wood,               // 树林
+
     /// <summary>
     /// 山脊 // 不可移动
     /// </summary>
@@ -29,71 +22,145 @@ public enum HexTerrainType
     /// </summary>
     Land,               // 土地
     /// <summary>
-    /// 石矿
+    /// 冰
     /// </summary>
-    Quarry,             // 石矿
+    Snow,               // 冰
     /// <summary>
-    /// 铁矿
+    /// 泥地
     /// </summary>
-    Iron,               // 铁矿
-    /// <summary>
-    /// 金矿
-    /// </summary>
-    Gold,               // 金矿
+    Mud               // 泥地
 }
 
 public static class HexTerrainTypeExtensions
 {
     public static int[] distance =
     {
-        int.MaxValue,
-        0,
-        3,
-        int.MaxValue,
-        2,
-        1,
-        4,
-        4,
-        4,
+        1,  //"草地",
+        1,  //"山脊",
+        3,  //"沙漠",
+        1,  //"土地",
+        4,  //"雪地",
+        4,  //泥地
+        
     };
 
     public static int Distance(this HexTerrainType type)
     {
         return distance[(int)type];
     }
+
+    // 0 沙子 1绿地 2泥地 3石头 4雪
+    public static int[] TerrainLandType =
+    {
+        1,  //"草地",
+        3,  //"山脊",
+        0,  //"沙漠",
+        3,  //"土地",
+        4,  //"雪地",
+        2,  //泥地
+    };
+
+    public static int LandType(this HexTerrainType type)
+    {
+        return TerrainLandType[(int)type];
+    }
+
+    public static string[] names =
+    {
+        "草地",
+        "山脊",
+        "沙漠",
+        "土地",
+        "雪地",
+        "泥地",
+    };
+
+    public static string Name(this HexTerrainType type)
+    {
+        return names[(int)type];
+    }
+
+    public static float[] windDampings =
+    {
+        0.0f, //"草地",
+        0.0f, //"山脊",
+        0.0f, //"沙漠",
+        0.0f, //"土地",
+        0.0f, // 冰
+        0.0f, // 泥地
+    };
+
+    public static float GetWindDampings(this HexTerrainType type)
+    {
+        return windDampings[(int)type];
+    }
+
+    // 扩散水系数
+    public static float[] moistureDampings =
+    {
+        0.7f, //"草地",
+        0.8f, //"山脊",
+        1f, //"沙漠",
+        0.8f, //"土地",
+        0f, //  冰
+        0.6f, // 泥地
+    };
+
+    public static float GetMoistureDampings(this HexTerrainType type)
+    {
+        return moistureDampings[(int)type];
+    }
+
+    // 温度吸收系数
+    public static float[] temperatureDampings =
+    {
+        0.7f, //"草地",
+        1f, //"山脊",
+        1f, //"沙漠",
+        0.9f, //"土地",
+        0.4f, //  冰
+        0.7f, // 泥地
+    };
+
+    public static float GetTemperatureDampings(this HexTerrainType type)
+    {
+        return temperatureDampings[(int)type];
+    }
+
+    // 水蒸发系数
+    public static float[] evaporationDampings =
+    {
+        0.8f, //"草地",
+        1f, //"山脊",
+        1f, //"沙漠",
+        0.9f, //"土地",
+        0.8f, //  冰
+        0.7f, // 泥地
+    };
+
+    public static float GetEvaporationDampings(this HexTerrainType type)
+    {
+        int index = (int)type;
+        return evaporationDampings[index] / temperatureDampings[index];
+    }
+    
 }
 
+
+
+
+
 // 根据数据返回格子的类型
-public class HexTerrain
+public static class HexTerrain
 {
     public static void SetTerrainType(HexCell cell)
     {
         if (CheckWater(cell)) {
 
         }
-        else if (CheckWater(cell))
-        {
-            cell.TerrainType = HexTerrainType.Desert;
-        }
-        else if (CheckWood(cell))
-        {
-            cell.TerrainType = HexTerrainType.Wood;
-        }
         else if (CheckDesert(cell))
         {
             cell.TerrainType = HexTerrainType.Desert;
-        }
-        else if (CheckQuarry(cell))
-        {
-            cell.TerrainType = HexTerrainType.Quarry;
-        }
-        else if (CheckIron(cell))
-        {
-            cell.TerrainType = HexTerrainType.Iron;
-        }
-        else if (CheckGold(cell))
-        {
-            cell.TerrainType = HexTerrainType.Gold;
         }
         else if (CheckGrassplot(cell))
         {
@@ -104,39 +171,25 @@ public class HexTerrain
     // 判断是否是水
     static bool CheckWater(HexCell cell)
     {
-        return cell.TerrainType == HexTerrainType.Water;
+        return cell.IsUnderwater;
     }
 
     // 判断是否是沙漠
     static bool CheckDesert(HexCell cell)
     {
-        // 降雨量少，蓄水量也少
-        if(cell.Rain < 20 && cell.Pondage < 20)
-        {
-            return true;
-        }
         return false;
     }
 
     // 判断是否是树林
     static bool CheckWood(HexCell cell)
     {
-        //降雨量正常，蓄水量正常
-        if (cell.Rain >= 20 && cell.Rain < 70 && cell.Pondage >= 50 && cell.Pondage < 90)
-        {
-            return true;
-        }
         return false;
     }
 
     // 判断是否是草地
     static bool CheckGrassplot(HexCell cell)
     {
-        //降雨量正常，蓄水量少
-        if (cell.Rain >= 20 && cell.Rain < 70 && cell.Pondage >= 20 && cell.Pondage < 50)
-        {
-            return true;
-        }
+        
         return false;
     }
 
@@ -170,30 +223,7 @@ public class HexTerrain
     // 设置
     public static void SetCellStore(HexCell cell)
     {
-        HexTerrainType _type = cell.TerrainType;
-        switch (_type)
-        {
-            case HexTerrainType.Wood:
-                // 木头，看蓄水量和降雨量
-                float c = cell.Pondage * HexMetrics.WoodDepositCoefficient + cell.Rain * HexMetrics.WoodDepositCoefficient;
-                cell.Store = (int)c * 10 * HexMetrics.InitialCellResourceNum;
-                break;
-            case HexTerrainType.Quarry:
-                // 石头，看高度  固定产量
-                cell.Store = (int)(cell.Height * HexMetrics.QuarryDepositCoefficient * HexMetrics.InitialCellResourceNum);
-                break;
-            case HexTerrainType.Land:
-                // 
-                break;
-            case HexTerrainType.Iron:
-                // 铁，看高度 固定产量
-                cell.Store = (int)(cell.Height * HexMetrics.IronDepositCoefficient) * HexMetrics.InitialCellResourceNum;
-                break;
-            case HexTerrainType.Gold:
-                // 金，没有增加量 所有存储量大
-                cell.Store = (int)(cell.Height * HexMetrics.IronDepositCoefficient) * 100 * HexMetrics.InitialCellResourceNum;
-                break;
-        }
+        
     }
 
     // 获得格子的增加量
@@ -201,29 +231,74 @@ public class HexTerrain
     {
         HexTerrainType _type = cell.TerrainType;
         int deposit = 0;
-        switch (_type)
-        {
-            case HexTerrainType.Wood:
-                // 木头，看蓄水量和降雨量
-                float c = cell.Pondage * HexMetrics.WoodDepositCoefficient + cell.Rain * HexMetrics.WoodDepositCoefficient;
-                deposit = (int)(cell.Store * c);
-                break;
-            case HexTerrainType.Quarry:
-                // 石头，看高度  固定产量
-                deposit = (int)(cell.Height * HexMetrics.QuarryDepositCoefficient);
-                break;
-            case HexTerrainType.Land:
-                // 
-                break;
-            case HexTerrainType.Iron:
-                // 铁，看高度 固定产量
-                deposit = (int)(cell.Height * HexMetrics.IronDepositCoefficient);
-                break;
-            case HexTerrainType.Gold:
-                // 金，没有增加量
-                break;
-        }
+        
 
         return deposit;
+    }
+
+
+
+    /// <summary>
+    /// 温度吸收
+    /// </summary>
+    /// <param name="cell"></param>
+    /// <returns></returns>
+    public static float GetTemperatureDampings(this HexCell cell)
+    {
+        if (cell.IsUnderwater)
+        {
+            return 0.5f;
+        }
+
+        return cell.TerrainType.GetTemperatureDampings();
+    }
+
+    /// <summary>
+    /// 扩散水系数
+    /// </summary>
+    /// <param name="cell"></param>
+    /// <returns></returns>
+    public static float GetMoistureDampings(this HexCell cell)
+    {
+        float baseMoisture = 1f;
+        if (cell.IsUnderwater)
+        {
+            return baseMoisture;
+        }
+        if(cell.FeatureType == HexFeatureType.Wood)
+        {
+            baseMoisture = 0.8f;
+        }
+        return baseMoisture * cell.TerrainType.GetMoistureDampings();
+    }
+
+
+    /// <summary>
+    /// 水蒸发系数
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public static float GetEvaporationDampings(this HexCell cell)
+    {
+        float baseMoisture = 1f;
+        if (cell.IsUnderwater)
+        {
+            return baseMoisture;
+        }
+        if (cell.FeatureType == HexFeatureType.Wood)
+        {
+            baseMoisture = 0.8f;
+        }
+        return baseMoisture * cell.TerrainType.GetEvaporationDampings();
+    }
+
+    /// <summary>
+    /// 风滞留系数
+    /// </summary>
+    /// <param name="type"></param>
+    /// <returns></returns>
+    public static float GetWindDampings(this HexCell cell)
+    {
+        return cell.TerrainType.GetWindDampings();
     }
 }

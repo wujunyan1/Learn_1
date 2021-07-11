@@ -45,7 +45,7 @@ public class InputCityName : MonoBehaviour
     {
         string cityName = nameInputText.text;
 
-        Func.BuildCity(cityName);
+        
 
         CameraMove.Locked = false;
     }

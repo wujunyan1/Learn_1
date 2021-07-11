@@ -15,9 +15,10 @@ public class Creater : Person
         speed = 20;
         DefaultSpeed = 20;
 
-        res = HeroConfigPool.GetHeroRes(0);
+        data = new TroopsData();
+        data.SetConfig(TroopsConfigDataManager.GetConfig(1));
 
-        AddFunction(new MoveFunction());
+        // AddFunction(new MoveFunction());
     }
 
     public Creater(HexCoordinates point)
@@ -27,10 +28,8 @@ public class Creater : Person
         speed = 20;
         DefaultSpeed = 20;
 
-        res = HeroConfigPool.GetHeroRes(0);
-
-        AddFunction(new MoveFunction());
-        AddFunction(new BuildCityFunction());
+        data = new TroopsData();
+        data.SetConfig(TroopsConfigDataManager.GetConfig(1));
     }
 
     public override void Save(BinaryWriter writer)
@@ -51,7 +50,6 @@ public class Creater : Person
     public override void Die()
     {
         base.Die();
-
-        camp.RemoveCreater(this);
+        
     }
 }

@@ -7,9 +7,9 @@ using UnityEngine.EventSystems;
 
 
 
-public class HexMapEditor : MonoBehaviour
+public class OldHexMapEditor : MonoBehaviour
 {
-    public static HexMapEditor instance;
+    public static OldHexMapEditor instance;
 
     public HexGrid hexGrid;
 
@@ -21,9 +21,7 @@ public class HexMapEditor : MonoBehaviour
 
     public GameObject createButton;
     UIShow createButtonShow;
-
-    // 城市界面
-    public CityView cityView;
+    
 
     int targetMask;
     int noMask;
@@ -104,8 +102,8 @@ public class HexMapEditor : MonoBehaviour
 
     void Update()
     {
-        Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit hit;
+        //Ray inputRay = Camera.main.ScreenPointToRay(Input.mousePosition);
+        //RaycastHit hit;
 
         //if (!Physics.Raycast(inputRay, out hit, 200f, noMask))
         if (!EventSystem.current.IsPointerOverGameObject())
@@ -275,7 +273,7 @@ public class HexMapEditor : MonoBehaviour
             switch (build.BuildType)
             {
                 case BuildType.City:
-                    cityView.Open((City)build);
+                    //cityView.Open((City)build);
                     break;
             }
         }

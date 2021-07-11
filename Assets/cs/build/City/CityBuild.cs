@@ -6,12 +6,15 @@ using System.IO;
 
 public enum CityBuildType
 {
-    Tavern,
-    Barracks,
+    TownHall,   //市政厅
+    Dwellings,  // 民居
+    Barracks,   // 兵营
+    Tavern,     // 酒馆
+    Granary,    // 粮仓
 }
 
 // 城市建筑
-public class CityBuild : Object
+public class CityBuild : SaveLoadInterface, RoundObject
 {
     protected CityBuildType type;
     public CityBuildType BuildType
@@ -31,46 +34,135 @@ public class CityBuild : Object
         }
     }
 
+    protected City city;
+
     // 等级
     protected int level = 0;
 
-    protected int maxLevel;
-
     // 升级或建造已过的回合数
     protected int upgradeRound = 0;
-    protected int NeedRound = 0;
+    protected bool isBuild = false;
 
-    public virtual void Save(BinaryWriter writer)
+    protected CityBuildConfig config;
+
+    protected List<CityBuff> buffs = new List<CityBuff>();
+
+
+    ~CityBuild()
     {
-        writer.Write((byte)type);
-        writer.Write((byte)level);
-        writer.Write((byte)upgradeRound);
-        writer.Write((byte)NeedRound);
+        if(city != null)
+        {
+            foreach (var buff in buffs)
+            {
+                city.RemoveCityBuff(buff);
+            }
+        }
     }
 
-    public virtual void Load(BinaryReader reader)
+    public virtual void SetCity(City city)
     {
-        //type = (CityBuildType)reader.ReadByte();
-        level = reader.ReadByte();
-        upgradeRound = reader.ReadByte();
-        NeedRound = reader.ReadByte();
+        this.city = city;
+    }
+
+    public virtual void Init(CityBuildConfig cityBuildConfig)
+    {
+        
+    }
+
+    public virtual void StartEffect()
+    {
     }
 
     public virtual void AddLevel()
     {
         level++;
+        isBuild = true;
+        upgradeRound = 0;
+        SetConfig(CityBuildConfigExtend.GetCityBuildConfig(type, level));
+        
+    }
+
+    public void SetConfig(CityBuildConfig cityBuildConfig)
+    {
+        config = cityBuildConfig;
+        level = config.level;
+
+        if (!isBuild)
+        {
+            StartEffect();
+        }
+    }
+
+    public int GetLevel()
+    {
+        return level;
+    }
+
+    public bool IsBuilding()
+    {
+        return isBuild;
+    }
+
+    public int GetBuildedNeedRoundNum()
+    {
+        return config.buildRound - upgradeRound;
+    }
+
+    public CityBuildConfig GetCityBuildConfig()
+    {
+        return config;
+    }
+
+    public virtual void Save(BinaryWriter writer)
+    {
+        writer.Write((byte)level);
+        writer.Write((byte)upgradeRound);
+        writer.Write(isBuild);
+    }
+
+    public virtual IEnumerator Load(BinaryReader reader)
+    {
+        level = reader.ReadByte();
+        upgradeRound = reader.ReadByte();
+        isBuild = reader.ReadBoolean();
+        yield return null;
     }
 
     public virtual void NextRound()
     {
-        if(upgradeRound >= NeedRound)
-        {
-            return;
-        }
         upgradeRound++;
-        if(upgradeRound == NeedRound)
+
+        if (isBuild && upgradeRound >= config.buildRound)
         {
-            AddLevel();
+            isBuild = false;
+            StartEffect();
         }
+    }
+
+    public virtual void LaterNextRound()
+    {
+    }
+
+    public static CityBuild CreateCityBuildByLoad(CityBuildType cityBuildType)
+    {
+        CityBuild cityBuild = null;
+
+        switch (cityBuildType)
+        {
+            case CityBuildType.TownHall:
+                cityBuild = new TownHall();
+                break;
+            case CityBuildType.Dwellings:
+                break;
+            case CityBuildType.Barracks:
+                cityBuild = new Barracks();
+                break;
+            case CityBuildType.Tavern:
+                break;
+            default:
+                break;
+        }
+
+        return cityBuild;
     }
 }

@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class ObjGenerate : MonoBehaviour
+public class ObjGenerate : EventObject
 {
-    public CreaterControl createrPrefab;
     public City cityPrefab;
 
     public PersonInspectorView personUIShow;
@@ -14,16 +13,57 @@ public class ObjGenerate : MonoBehaviour
 
     bool isf = true;
 
-    public static ObjGenerate instance;
+    private static ObjGenerate instance;
 
-    private void Awake()
+    public static ObjGenerate GetInstance()
     {
-        instance = this;
+        if (instance == null)
+        {
+            instance = new ObjGenerate();
+        }
+        return instance;
     }
+
+    private ObjGenerate()
+    {
+        
+    }
+
+    public TroopControl GenerateTroopModel(Troop person)
+    {
+        TroopsData data = person.data;
+        string modelPath = data.config.model;
+        string name = data.config.modelName;
+
+        PrefabsManager prefabsManager = PrefabsManager.GetInstance();
+        GameObject modelObj;
+        prefabsManager.GetGameObj(out modelObj, name);
+
+
+        GameObject troopObj;
+        prefabsManager.GetGameObj(out troopObj, "Troop");
+        
+
+        TroopControl control = troopObj.GetComponent<TroopControl>();
+        control.SetModel(modelObj);
+        control.SetTroop(person);
+
+        person.control = control;
+
+        return control;
+    }
+
+
 
     public void GenerateCreater(Creater creater)
     {
-        CreaterControl item = Instantiate(createrPrefab);
+        GameObject createrPrefab;
+
+
+        PrefabsManager.GetInstance().GetPrefab(out createrPrefab, "Creater");
+
+        GameObject obj = Object.Instantiate(createrPrefab);
+        CreaterControl item = obj.GetComponent<CreaterControl>();
         item.SetPerson(creater);
         item.controlView = personUIShow;
         //item.AddFunction(new MoveFunction());
@@ -45,24 +85,57 @@ public class ObjGenerate : MonoBehaviour
         //cell.Person = item;
     }
 
+
+    public CityControl GenerateCityModel()
+    {
+        string name = "City";
+
+        PrefabsManager prefabsManager = PrefabsManager.GetInstance();
+        GameObject modelObj;
+        prefabsManager.GetGameObj(out modelObj, name);
+
+        CityControl city = modelObj.GetComponent<CityControl>();
+
+        return city;
+    }
+
+
     public City CreateCity()
     {
-        City item = Instantiate(cityPrefab);
+        //City item = Object.Instantiate(cityPrefab);
 
-        HexGrid grid = HexGrid.instance;
-        item.transform.SetParent(grid.objPlane, false);
-        return item;
+        //HexGrid grid = HexGrid.instance;
+        //item.transform.SetParent(grid.objPlane, false);
+        //return item;
+        return null;
     }
 
     public City CreateCity(HexCoordinates coordinates)
     {
-        City item = Instantiate(cityPrefab);
+        //City item = Object.Instantiate(cityPrefab);
 
-        HexGrid grid = HexGrid.instance;
-        item.transform.SetParent(grid.objPlane, false);
+        //HexGrid grid = HexGrid.instance;
+        //item.transform.SetParent(grid.objPlane, false);
 
-        item.BuildNewCity(coordinates);
+        //item.BuildNewCity(coordinates);
 
-        return item;
+        return null;
     }
+
+
+
+
+    public FarmControl GenerateFarmModel()
+    {
+        string name = "Farm";
+
+        PrefabsManager prefabsManager = PrefabsManager.GetInstance();
+        GameObject modelObj;
+        prefabsManager.GetGameObj(out modelObj, name);
+
+        FarmControl farm = modelObj.GetComponent<FarmControl>();
+
+        return farm;
+    }
+
 }

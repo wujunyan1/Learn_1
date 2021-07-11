@@ -22,6 +22,8 @@ public class HexMesh : MonoBehaviour
     //public bool useTerrainTypes;
     public bool useCollider, useCellData, useUVCoordinates, useUV2Coordinates;
 
+    public bool unDestroyVertices = false;
+
     void Awake()
     {
         GetComponent<MeshFilter>().mesh = hexMesh = new Mesh();
@@ -58,7 +60,12 @@ public class HexMesh : MonoBehaviour
     public void Apply()
     {
         hexMesh.SetVertices(vertices);
-        ListPool<Vector3>.Add(vertices);
+
+        if (unDestroyVertices)
+        {
+            ListPool<Vector3>.Add(vertices);
+        }
+
         if (useCellData)
         {
             hexMesh.SetColors(cellWeights);
@@ -114,14 +121,14 @@ public class HexMesh : MonoBehaviour
         triangles.Add(vertexIndex + 2);
     }
 
-    public void AddTriangleUV(Vector2 uv1, Vector2 uv2, Vector3 uv3)
+    public void AddTriangleUV(Vector2 uv1, Vector2 uv2, Vector2 uv3)
     {
         uvs.Add(uv1);
         uvs.Add(uv2);
         uvs.Add(uv3);
     }
 
-    public void AddTriangleUV2(Vector2 uv1, Vector2 uv2, Vector3 uv3)
+    public void AddTriangleUV2(Vector2 uv1, Vector2 uv2, Vector2 uv3)
     {
         uv2s.Add(uv1);
         uv2s.Add(uv2);
@@ -266,4 +273,31 @@ public class HexMesh : MonoBehaviour
         AddQuadCellData(indices, weights, weights, weights, weights);
     }
 
+
+    void OnDrawGizmos()
+    {
+        if (triangles == null)
+        {
+            return;
+        }
+        Gizmos.color = Color.black;
+
+        int count = triangles.Count / 3;
+
+        for (int i = 0; i < count; i++)
+        {
+            int i0 = triangles[i * 3];
+            int i1 = triangles[i * 3 + 1];
+            int i2 = triangles[i * 3 + 2];
+
+            Gizmos.DrawLine(vertices[i0], vertices[i1]);
+            Gizmos.DrawLine(vertices[i1], vertices[i2]);
+            Gizmos.DrawLine(vertices[i2], vertices[i0]);
+        }
+    }
+
+    public List<Vector3> GetVertices()
+    {
+        return vertices;
+    }
 }

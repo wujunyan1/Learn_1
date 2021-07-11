@@ -2,22 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HeroConfigPool : MonoBehaviour
+public class HeroConfigPool
 {
     public static HeroRes[] heroRes;
-
-    private void Awake()
-    {
-        heroRes = new HeroRes[transform.childCount];
-
-        for(int i = 0; i < transform.childCount; i++)
-        {
-            HeroRes res = transform.GetChild(i).GetComponent<HeroRes>();
-            heroRes[i] = res;
-            res.index = i;
-        }
-    }
-
+    
     public static HeroRes GetRandomHeroRes()
     {
         int index = Random.Range(0, heroRes.Length);

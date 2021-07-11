@@ -1,0 +1,39 @@
+ManifestFileVersion: 0
+CRC: 2147136444
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 8748fb1618bc53a11f417c8f1dbc2035
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 45af88298f05150ce6fcd44ace862367
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 28
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 90
+  Script: {instanceID: 0}
+- Class: 95
+  Script: {instanceID: 0}
+- Class: 137
+  Script: {instanceID: 0}
+Assets:
+- Assets/Prefabs/battle/diguo_cike.prefab
+- Assets/Prefabs/battle/diguo_qibing.prefab
+- Assets/Prefabs/battle/diguo_mingbing.prefab
+- Assets/Prefabs/battle/diguo_gongshou.prefab
+Dependencies: []

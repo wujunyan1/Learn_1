@@ -29,11 +29,40 @@ public class HexMapCamera : MonoBehaviour
 
     public static HexMapCamera instance;
 
+    private static int _lock = 0;
+
+    public static bool Locked
+    {
+        set
+        {
+            _lock = value? _lock + 1: _lock - 1;
+            if (instance)
+            {
+                instance.enabled = _lock <= 0;
+            }
+
+            Debug.Log(_lock);
+        }
+
+    }
+
     void Awake()
     {
         instance = this;
         swivel = transform.GetChild(0);
         stick = swivel.GetChild(0);
+    }
+
+    private void Start()
+    {
+        Debug.Log(_lock);
+        instance.enabled = _lock <= 0;
+    }
+
+    void OnEnable()
+    {
+        instance = this;
+        ValidatePosition();
     }
 
     public void Update()
@@ -82,13 +111,14 @@ public class HexMapCamera : MonoBehaviour
 
         Vector3 position = transform.localPosition;
         position += direction * distance;
-        transform.localPosition = ClampPosition(position);
+        transform.localPosition = 
+            GameCenter.instance.gameData.wrapping ? WrapPosition(position) : ClampPosition(position);
     }
 
     // 判断边界
     Vector3 ClampPosition(Vector3 position)
     {
-        float xMax = ( grid.cellCountX - 0.5f ) * (2f * HexMetrics.innerRadius);
+        float xMax = ( grid.cellCountX - 0.5f ) * HexMetrics.innerDiameter;
         position.x = Mathf.Clamp(position.x, 0f, xMax);
 
         float zMax = ( grid.cellCountZ - 1f) * (1.5f * HexMetrics.outerRadius);
@@ -109,5 +139,29 @@ public class HexMapCamera : MonoBehaviour
             rotationAngle -= 360f;
         }
         transform.localRotation = Quaternion.Euler(0f, rotationAngle, 0f);
+    }
+
+    public static void ValidatePosition()
+    {
+        instance.AdjustPosition(0f, 0f);
+    }
+
+    Vector3 WrapPosition(Vector3 position)
+    {
+        float width = grid.cellCountX * HexMetrics.innerDiameter;
+        while (position.x < 0f)
+        {
+            position.x += width;
+        }
+        while (position.x > width)
+        {
+            position.x -= width;
+        }
+
+        float zMax = (grid.cellCountZ - 1) * (1.5f * HexMetrics.outerRadius);
+        position.z = Mathf.Clamp(position.z, 0f, zMax);
+
+        grid.CenterMap(position.x);
+        return position;
     }
 }

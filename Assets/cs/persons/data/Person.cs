@@ -45,6 +45,9 @@ public class Person : RoundObject
 
     public HeroRes res;
 
+    protected TroopsData data;
+    protected TroopControl control;
+
     HexDirection dir;
     HexDirection Direction
     {
@@ -96,6 +99,28 @@ public class Person : RoundObject
         res = HeroConfigPool.GetHeroRes(reader.ReadByte());
     }
 
+    public TroopsData GetTroopsData()
+    {
+        return data;
+    }
+
+    public void SetTroopControl(TroopControl troopControl)
+    {
+        control = troopControl;
+
+        //control.Location = HexGrid.instance.GetCell(this.Point);
+    }
+
+    public void SetPointAndUpdateToModel(HexCoordinates coordinates)
+    {
+        Point = coordinates;
+        
+        if(null != control)
+        {
+            control.Location = HexGrid.instance.GetCell(this.Point);
+        }
+    }
+
     public virtual void ClearData()
     {
         ClearModel();
@@ -114,7 +139,7 @@ public class Person : RoundObject
 
     public void AddFunction(ObjFunction func)
     {
-        func.control = this;
+        //func.control = this;
         functions.Add(func);
     }
 
@@ -122,25 +147,27 @@ public class Person : RoundObject
     {
         List<ObjFunction> list = new List<ObjFunction>();
 
-        foreach (ObjFunction func in functions)
-        {
-            if (func.IsActive())
-            {
-                list.Add(func);
-            }
-        }
+        //foreach (ObjFunction func in functions)
+        //{
+        //    if (func.IsActive())
+        //    {
+        //        list.Add(func);
+        //    }
+        //}
 
         return list;
     }
 
-    public override void NextRound()
+    public void NextRound()
     {
-        base.NextRound();
-
         // 速度回复
         speed = DefaultSpeed;
     }
 
+    public void LaterNextRound()
+    {
+
+    }
 
 
     /// <summary>
@@ -230,6 +257,39 @@ public class Person : RoundObject
         GetMovePath(moveToCell);
     }
 
+    public int GetMoveCost(
+        HexCell fromCell, HexCell toCell, HexDirection direction)
+    {
+        HexEdgeType edgeType = fromCell.GetEdgeType(toCell);
+        if (edgeType == HexEdgeType.Cliff)
+        {
+            return -1;
+        }
+
+
+        int moveCost;
+        if (fromCell.HasRoadThroughEdge(direction))
+        {
+            moveCost = 1;
+        }
+        else if (fromCell.HasWall(direction) || toCell.HasWall(direction.Opposite()))
+        {
+            return -1;
+        }
+        else
+        {
+            moveCost = edgeType == HexEdgeType.Flat ? 5 : 10;
+
+            // 不同类型地块额外增加消耗
+            moveCost += toCell.TerrainType.Distance();
+
+            // 有河流在额外加3
+            moveCost += toCell.HasRiver() ? 3 : 0;
+        }
+        return moveCost;
+    }
+
+    
 
     public virtual void Die()
     {

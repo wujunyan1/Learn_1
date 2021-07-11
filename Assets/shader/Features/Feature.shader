@@ -17,6 +17,7 @@
 
 		#pragma multi_compile _ HEX_MAP_EDIT_MODE
 
+		#include "../HexMetrics.cginc"
 		#include "../HexCellData.cginc"
 
 		sampler2D _MainTex, _GridCoordinates;
@@ -38,6 +39,7 @@
 			float4 gridUV = float4(pos.xz, 0, 0);
 			gridUV.x *= 1 / (4 * 8.66025404);
 			gridUV.y *= 1 / (2 * 15.0);
+
 			float2 cellDataCoordinates =
 				floor(gridUV.xy) + tex2Dlod(_GridCoordinates, gridUV).rg;
 			cellDataCoordinates *= 2;
